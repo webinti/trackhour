@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+:root {
+  /* TrackHour Brand Colors */
+  --background: #F2F2F2;
+  --foreground: #1A0B2E;
+  --card: #ffffff;
+  --card-foreground: #1A0B2E;
+  --border: #E5E5E5;
+  --input: #ffffff;
+  --ring: #3333FF;
+
+  --primary: #3333FF;
+  --primary-foreground: #ffffff;
+  --secondary: #F2F2F2;
+  --secondary-foreground: #1A0B2E;
+  --muted: #E8E8E8;
+  --muted-foreground: #6B6B80;
+  --accent: #F2F2F2;
+  --accent-foreground: #1A0B2E;
+  --destructive: #EF4444;
+  --destructive-foreground: #ffffff;
+
+  /* Brand */
+  --brand-blue: #3333FF;
+  --brand-pink: #FF6EB4;
+  --brand-purple: #7B3FE4;
+  --brand-yellow: #F5A623;
+  --brand-green: #00D68F;
+  --brand-dark: #1A0B2E;
+  --brand-card-dark: #2D1B4E;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-green: var(--brand-green);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-card-dark: var(--brand-card-dark);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #C0C0D0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9090A0;
+}
+
+/* Timer digit animation */
+@keyframes flipIn {
+  from { transform: rotateX(-90deg); opacity: 0; }
+  to { transform: rotateX(0deg); opacity: 1; }
+}
+
+.timer-digit {
+  animation: flipIn 0.1s ease-out;
+}
+
+/* Floating shapes animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-12px) rotate(3deg); }
+  66% { transform: translateY(6px) rotate(-2deg); }
+}
+
+.float-shape {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

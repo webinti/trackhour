@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/Tim/Documents/Claude/trackhour log --oneline -20)"
+    ]
+  }
+}
