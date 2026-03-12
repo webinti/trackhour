@@ -18,7 +18,7 @@ interface Project {
 interface Task {
   id: string;
   name: string;
-  daily_rate?: number;
+  hourly_rate?: number;
   project_id: string;
   projects: Project;
 }
@@ -37,7 +37,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
   const [formData, setFormData] = useState({
     name: "",
     project_id: "",
-    daily_rate: "",
+    hourly_rate: "",
   });
 
   const supabase = createClient();
@@ -93,8 +93,8 @@ export function TasksPage({ teamId }: TasksPageProps) {
           .from("tasks")
           .update({
             name: formData.name,
-            daily_rate: formData.daily_rate
-              ? parseFloat(formData.daily_rate)
+            hourly_rate: formData.hourly_rate
+              ? parseFloat(formData.hourly_rate)
               : null,
           })
           .eq("id", editingId);
@@ -106,8 +106,8 @@ export function TasksPage({ teamId }: TasksPageProps) {
           {
             project_id: formData.project_id,
             name: formData.name,
-            daily_rate: formData.daily_rate
-              ? parseFloat(formData.daily_rate)
+            hourly_rate: formData.hourly_rate
+              ? parseFloat(formData.hourly_rate)
               : null,
           },
         ]);
@@ -116,7 +116,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
         toast.success("Tâche créée avec succès");
       }
 
-      setFormData({ name: "", project_id: "", daily_rate: "" });
+      setFormData({ name: "", project_id: "", hourly_rate: "" });
       setEditingId(null);
       setShowForm(false);
       fetchProjectsAndTasks();
@@ -143,7 +143,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
     setFormData({
       name: task.name,
       project_id: task.project_id,
-      daily_rate: task.daily_rate?.toString() || "",
+      hourly_rate: task.hourly_rate?.toString() || "",
     });
     setEditingId(task.id);
     setShowForm(true);
@@ -165,7 +165,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
           onClick={() => {
             setShowForm(true);
             setEditingId(null);
-            setFormData({ name: "", project_id: "", daily_rate: "" });
+            setFormData({ name: "", project_id: "", hourly_rate: "" });
           }}
           className="gap-2"
         >
@@ -219,15 +219,15 @@ export function TasksPage({ teamId }: TasksPageProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tarif journalier (€)
+                  Taux horaire (€/h)
                 </label>
                 <Input
                   type="number"
-                  placeholder="Ex: 250"
+                  placeholder="Ex: 75"
                   step="0.01"
-                  value={formData.daily_rate}
+                  value={formData.hourly_rate}
                   onChange={(e) =>
-                    setFormData({ ...formData, daily_rate: e.target.value })
+                    setFormData({ ...formData, hourly_rate: e.target.value })
                   }
                 />
               </div>
@@ -287,7 +287,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
                   </h3>
                   <p className="text-sm text-gray-600">
                     {task.projects?.name}
-                    {task.daily_rate && ` • ${task.daily_rate}€/jour`}
+                    {task.hourly_rate && ` • ${task.hourly_rate}€/h`}
                   </p>
                 </div>
               </div>

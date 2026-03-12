@@ -38,5 +38,6 @@ export default async function ClientsRoute() {
     teamId = memberTeams?.[0]?.team_id;
   }
 
-  return <ClientsPage teamId={teamId} />;
+  const plan = userTeams?.[0]?.plan || "free";
+  return <ClientsPage teamId={teamId} plan={plan} />;
 }

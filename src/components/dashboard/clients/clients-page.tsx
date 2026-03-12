@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Edit2, FolderOpen, Clock } from "lucide-react";
+import { Plus, Trash2, Edit2, FolderOpen, Clock, Lock } from "lucide-react";
 import { toast } from "sonner";
-import { formatDurationHuman } from "@/lib/utils";
+import { formatDurationHuman, PLAN_LIMITS } from "@/lib/utils";
+import type { Plan } from "@/lib/utils";
 
 interface TimeEntry {
   started_at: string;
@@ -33,9 +34,10 @@ interface Client {
 
 interface ClientsPageProps {
   teamId?: string;
+  plan?: Plan;
 }
 
-export function ClientsPage({ teamId }: ClientsPageProps) {
+export function ClientsPage({ teamId, plan = "free" }: ClientsPageProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -78,6 +80,12 @@ export function ClientsPage({ teamId }: ClientsPageProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!teamId || !formData.company_name.trim()) return;
+
+    // Plan gating
+    if (!editingId && clients.length >= PLAN_LIMITS[plan].clients) {
+      toast.error(`Limite atteinte — passez au plan supérieur pour créer plus de clients (max ${PLAN_LIMITS[plan].clients} sur le plan ${plan})`);
+      return;
+    }
 
     try {
       if (editingId) {
@@ -171,24 +179,28 @@ export function ClientsPage({ teamId }: ClientsPageProps) {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-[var(--brand-dark)]">Clients</h1>
-        <Button
-          onClick={() => {
-            setShowForm(true);
-            setEditingId(null);
-            setFormData({
-              first_name: "",
-              last_name: "",
-              company_name: "",
-              email: "",
-              phone: "",
-              address: "",
-            });
-          }}
-          className="gap-2"
-        >
-          <Plus size={18} />
-          Nouveau client
-        </Button>
+        {clients.length >= PLAN_LIMITS[plan].clients ? (
+          <Button
+            onClick={() => toast.error(`Limite de ${PLAN_LIMITS[plan].clients} clients atteinte — upgradez votre plan dans les Paramètres`)}
+            variant="secondary"
+            className="gap-2 opacity-60"
+          >
+            <Lock size={16} />
+            Limite atteinte
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              setShowForm(true);
+              setEditingId(null);
+              setFormData({ first_name: "", last_name: "", company_name: "", email: "", phone: "", address: "" });
+            }}
+            className="gap-2"
+          >
+            <Plus size={18} />
+            Nouveau client
+          </Button>
+        )}
       </div>
 
       <AnimatePresence>

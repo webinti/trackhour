@@ -24,20 +24,28 @@ import { useRouter } from "next/navigation";
 import type { Profile } from "@/lib/supabase/types";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
-  { href: "/timer", icon: Timer, label: "Timer" },
-  { href: "/projects", icon: FolderKanban, label: "Projets" },
-  { href: "/clients", icon: Building2, label: "Clients" },
-  { href: "/tasks", icon: CheckSquare, label: "Tâches" },
-  { href: "/teams", icon: Users, label: "Équipes" },
-  { href: "/reports", icon: BarChart3, label: "Rapports" },
-];
+  { href: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", countKey: null },
+  { href: "/timer", icon: Timer, label: "Timer", countKey: null },
+  { href: "/projects", icon: FolderKanban, label: "Projets", countKey: "projects" },
+  { href: "/clients", icon: Building2, label: "Clients", countKey: "clients" },
+  { href: "/tasks", icon: CheckSquare, label: "Tâches", countKey: "tasks" },
+  { href: "/teams", icon: Users, label: "Équipes", countKey: "members" },
+  { href: "/reports", icon: BarChart3, label: "Rapports", countKey: null },
+] as const;
+
+interface SidebarCounts {
+  projects: number;
+  clients: number;
+  tasks: number;
+  members: number;
+}
 
 interface SidebarProps {
   profile: Profile | null;
+  counts?: SidebarCounts;
 }
 
-export function Sidebar({ profile }: SidebarProps) {
+export function Sidebar({ profile, counts }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -113,12 +121,20 @@ export function Sidebar({ profile }: SidebarProps) {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="text-sm font-medium whitespace-nowrap relative z-10"
+                    className="text-sm font-medium whitespace-nowrap relative z-10 flex-1"
                   >
                     {item.label}
                   </motion.span>
                 )}
               </AnimatePresence>
+              {!collapsed && item.countKey && counts && counts[item.countKey] > 0 && (
+                <span className={cn(
+                  "relative z-10 text-xs font-bold px-1.5 py-0.5 rounded-md min-w-[20px] text-center",
+                  isActive ? "bg-white/20 text-white" : "bg-white/10 text-white/60"
+                )}>
+                  {counts[item.countKey]}
+                </span>
+              )}
 
               {/* Tooltip when collapsed */}
               {collapsed && (

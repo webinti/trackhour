@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Play, Trash2, Pencil } from "lucide-react";
+import { Play, Trash2, Pencil, Check, X } from "lucide-react";
 import { formatDuration, formatCurrency, calculateEarnings } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
@@ -33,22 +33,56 @@ function formatGroupDate(dateStr: string): string {
 export function TimerPage({ timeEntries }: TimerPageProps) {
   const supabase = createClient();
   const [entries, setEntries] = useState(timeEntries);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [editRate, setEditRate] = useState<string>("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   const handleDeleteEntry = useCallback(async (id: string) => {
     await supabase.from("time_entries").delete().eq("id", id);
     setEntries((prev) => prev.filter((e) => e.id !== id));
+    setConfirmDeleteId(null);
   }, [supabase]);
+
+  const handleStartEdit = useCallback((entry: any) => {
+    setEditingId(entry.id);
+    setEditDescription(entry.description || "");
+    const rate = entry.hourly_rate ?? entry.tasks?.hourly_rate ?? null;
+    setEditRate(rate != null ? rate.toString() : "");
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  }, []);
+
+  const handleSaveEdit = useCallback(async (id: string) => {
+    const parsedRate = parseFloat(editRate);
+    const hourly_rate = !isNaN(parsedRate) && parsedRate > 0 ? parsedRate : null;
+    await supabase.from("time_entries").update({ description: editDescription || null, hourly_rate }).eq("id", id);
+    setEntries((prev) => prev.map((e) => e.id === id ? { ...e, description: editDescription || null, hourly_rate } : e));
+    setEditingId(null);
+  }, [supabase, editDescription, editRate]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingId(null);
+  }, []);
 
   const grouped = groupEntriesByDate(entries);
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       {/* Time entries list */}
       <div className="space-y-4">
         {Object.entries(grouped).map(([date, dayEntries]) => {
           const totalSeconds = dayEntries.reduce((acc, entry) => {
-            const duration = (new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime()) / 1000;
+            const rawMs = new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime();
+            const duration = Math.max(0, rawMs / 1000 - (entry.paused_duration || 0));
             return acc + duration;
+          }, 0);
+          const totalEarnings = dayEntries.reduce((acc, entry) => {
+            const rate = entry.hourly_rate ?? entry.tasks?.hourly_rate;
+            if (!rate) return acc;
+            const rawMs = new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime();
+            const duration = Math.max(0, rawMs / 1000 - (entry.paused_duration || 0));
+            return acc + calculateEarnings(duration, rate);
           }, 0);
 
           return (
@@ -62,18 +96,25 @@ export function TimerPage({ timeEntries }: TimerPageProps) {
                 <span className="text-sm font-bold text-[var(--brand-dark)] capitalize">
                   {formatGroupDate(date)}
                 </span>
-                <span className="text-sm font-mono font-semibold text-gray-500">
-                  {formatDuration(Math.floor(totalSeconds))}
-                </span>
+                <div className="flex items-center gap-3">
+                  {totalEarnings > 0 && (
+                    <span className="text-sm font-semibold text-[var(--brand-green)]">
+                      {formatCurrency(totalEarnings)}
+                    </span>
+                  )}
+                  <span className="text-sm font-mono font-semibold text-gray-500">
+                    {formatDuration(Math.floor(totalSeconds))}
+                  </span>
+                </div>
               </div>
 
               {/* Entries */}
               <div className="bg-white rounded-2xl border border-[var(--border)] overflow-hidden">
                 {dayEntries.map((entry, idx) => {
-                  const duration = (new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime()) / 1000;
-                  const earnings = entry.tasks?.daily_rate
-                    ? calculateEarnings(duration, entry.tasks.daily_rate)
-                    : null;
+                  const rawMs = new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime();
+                  const duration = Math.max(0, rawMs / 1000 - (entry.paused_duration || 0));
+                  const entryRate = entry.hourly_rate ?? entry.tasks?.hourly_rate ?? null;
+                  const earnings = entryRate ? calculateEarnings(duration, entryRate) : null;
 
                   return (
                     <motion.div
@@ -94,36 +135,78 @@ export function TimerPage({ timeEntries }: TimerPageProps) {
 
                       {/* Description */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--brand-dark)] truncate">
-                          {entry.tasks?.name || entry.description || (
-                            <span className="text-gray-400 italic">Sans titre</span>
-                          )}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {entry.projects && (
-                            <span
-                              className="text-xs font-medium px-2 py-0.5 rounded-full"
-                              style={{
-                                backgroundColor: `${entry.projects.color}20`,
-                                color: entry.projects.color,
+                        {editingId === entry.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              ref={editInputRef}
+                              type="text"
+                              value={editDescription}
+                              onChange={(e) => setEditDescription(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveEdit(entry.id);
+                                if (e.key === "Escape") handleCancelEdit();
                               }}
-                            >
-                              {entry.projects.name}
-                            </span>
-                          )}
-                          {entry.projects?.clients?.name && (
-                            <span className="text-xs text-gray-400">
-                              {entry.projects.clients.name}
-                            </span>
-                          )}
-                        </div>
+                              placeholder="Description..."
+                              className="flex-1 text-sm font-medium text-[var(--brand-dark)] bg-gray-50 border border-[var(--brand-blue)] rounded-lg px-2 py-1 focus:outline-none"
+                            />
+                            <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 bg-gray-50 w-24 shrink-0">
+                              <input
+                                type="number"
+                                value={editRate}
+                                onChange={(e) => setEditRate(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveEdit(entry.id);
+                                  if (e.key === "Escape") handleCancelEdit();
+                                }}
+                                placeholder="75"
+                                min="0"
+                                step="0.5"
+                                className="w-full text-xs text-[var(--brand-dark)] bg-transparent focus:outline-none placeholder:text-gray-300"
+                              />
+                              <span className="text-xs text-gray-400 shrink-0">€/h</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-[var(--brand-dark)] truncate">
+                              {entry.tasks?.name || entry.description || (
+                                <span className="text-gray-400 italic">Sans titre</span>
+                              )}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {entry.projects && (
+                                <span
+                                  className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                  style={{
+                                    backgroundColor: `${entry.projects.color}20`,
+                                    color: entry.projects.color,
+                                  }}
+                                >
+                                  {entry.projects.name}
+                                </span>
+                              )}
+                              {entry.projects?.clients?.name && (
+                                <span className="text-xs text-gray-400">
+                                  {entry.projects.clients.name}
+                                </span>
+                              )}
+                              {entryRate && (
+                                <span className="text-xs text-gray-400">
+                                  {entryRate}€/h
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       {/* Earnings */}
-                      {earnings !== null && (
-                        <span className="text-xs font-semibold text-[var(--brand-green)] hidden sm:block">
+                      {earnings !== null ? (
+                        <span className="text-xs font-semibold text-[var(--brand-green)] shrink-0">
                           {formatCurrency(earnings)}
                         </span>
+                      ) : (
+                        <span className="text-xs text-gray-300 shrink-0">—</span>
                       )}
 
                       {/* Duration */}
@@ -132,16 +215,57 @@ export function TimerPage({ timeEntries }: TimerPageProps) {
                       </span>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors">
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEntry(entry.id)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                      <div className={cn(
+                        "flex items-center gap-1 transition-opacity",
+                        editingId === entry.id || confirmDeleteId === entry.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}>
+                        {editingId === entry.id ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveEdit(entry.id)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition-colors"
+                            >
+                              <Check size={13} />
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              <X size={13} />
+                            </button>
+                          </>
+                        ) : confirmDeleteId === entry.id ? (
+                          <>
+                            <span className="text-xs text-red-500 font-medium mr-1">Supprimer ?</span>
+                            <button
+                              onClick={() => handleDeleteEntry(entry.id)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                              <Check size={13} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              <X size={13} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleStartEdit(entry)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(entry.id)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   );

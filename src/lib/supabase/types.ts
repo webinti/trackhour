@@ -19,6 +19,7 @@ export interface Database {
           email: string;
           full_name: string | null;
           avatar_url: string | null;
+          phone_number: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -27,6 +28,7 @@ export interface Database {
           email: string;
           full_name?: string | null;
           avatar_url?: string | null;
+          phone_number?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -34,6 +36,7 @@ export interface Database {
           email?: string;
           full_name?: string | null;
           avatar_url?: string | null;
+          phone_number?: string | null;
           updated_at?: string;
         };
       };
@@ -47,6 +50,9 @@ export interface Database {
           plan: Plan;
           plan_status: string | null;
           plan_period_end: string | null;
+          company_name: string | null;
+          company_address: string | null;
+          company_email: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -59,6 +65,9 @@ export interface Database {
           plan?: Plan;
           plan_status?: string | null;
           plan_period_end?: string | null;
+          company_name?: string | null;
+          company_address?: string | null;
+          company_email?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -69,6 +78,9 @@ export interface Database {
           plan?: Plan;
           plan_status?: string | null;
           plan_period_end?: string | null;
+          company_name?: string | null;
+          company_address?: string | null;
+          company_email?: string | null;
           updated_at?: string;
         };
       };
@@ -163,7 +175,7 @@ export interface Database {
           id: string;
           project_id: string;
           name: string;
-          daily_rate: number | null;
+          hourly_rate: number | null;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -172,14 +184,14 @@ export interface Database {
           id?: string;
           project_id: string;
           name: string;
-          daily_rate?: number | null;
+          hourly_rate?: number | null;
           created_by: string;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           name?: string;
-          daily_rate?: number | null;
+          hourly_rate?: number | null;
           updated_at?: string;
         };
       };
@@ -190,8 +202,11 @@ export interface Database {
           project_id: string | null;
           user_id: string;
           description: string | null;
+          hourly_rate: number | null;
           started_at: string;
           ended_at: string | null;
+          paused_at: string | null;
+          paused_duration: number;
           created_at: string;
         };
         Insert: {
@@ -200,16 +215,22 @@ export interface Database {
           project_id?: string | null;
           user_id: string;
           description?: string | null;
+          hourly_rate?: number | null;
           started_at: string;
           ended_at?: string | null;
+          paused_at?: string | null;
+          paused_duration?: number;
           created_at?: string;
         };
         Update: {
           task_id?: string | null;
           project_id?: string | null;
           description?: string | null;
+          hourly_rate?: number | null;
           started_at?: string;
           ended_at?: string | null;
+          paused_at?: string | null;
+          paused_duration?: number;
         };
       };
     };

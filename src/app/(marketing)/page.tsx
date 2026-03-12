@@ -15,9 +15,9 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <FeaturesSection />
+      <div id="fonctionnalites"><FeaturesSection /></div>
       <HowItWorksSection />
-      <PricingSection />
+      <div id="tarifs"><PricingSection /></div>
       <CTASection />
     </>
   );

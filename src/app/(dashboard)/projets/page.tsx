@@ -27,5 +27,5 @@ export default async function ProjetsRoute() {
 
   const teamId = teams?.id;
 
-  return <ProjectsPage teamId={teamId} />;
+  return <ProjectsPage teamId={teamId} plan={teams?.plan || "free"} />;
 }

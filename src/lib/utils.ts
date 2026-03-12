@@ -27,10 +27,8 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function calculateEarnings(seconds: number, dailyRate: number): number {
-  const hours = seconds / 3600;
-  const dailyHours = 8;
-  return (hours / dailyHours) * dailyRate;
+export function calculateEarnings(seconds: number, hourlyRate: number): number {
+  return (seconds / 3600) * hourlyRate;
 }
 
 export const PROJECT_COLORS = [

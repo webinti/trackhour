@@ -8,8 +8,10 @@ import { Toggle } from "@/components/ui/toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Edit2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { PLAN_LIMITS } from "@/lib/utils";
+import type { Plan } from "@/lib/utils";
 
 interface Client {
   id: string;
@@ -28,9 +30,10 @@ interface Project {
 
 interface ProjectsPageProps {
   teamId?: string;
+  plan?: Plan;
 }
 
-export function ProjectsPage({ teamId }: ProjectsPageProps) {
+export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +90,12 @@ export function ProjectsPage({ teamId }: ProjectsPageProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!teamId || !formData.name.trim() || !formData.client_id) return;
+
+    // Plan gating
+    if (!editingId && projects.length >= PLAN_LIMITS[plan].projects) {
+      toast.error(`Limite atteinte — passez au plan supérieur pour créer plus de projets (max ${PLAN_LIMITS[plan].projects} sur le plan ${plan})`);
+      return;
+    }
 
     try {
       if (editingId) {
@@ -173,22 +182,28 @@ export function ProjectsPage({ teamId }: ProjectsPageProps) {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-[var(--brand-dark)]">Projets</h1>
-        <Button
-          onClick={() => {
-            setShowForm(true);
-            setEditingId(null);
-            setFormData({
-              name: "",
-              color: "#3333FF",
-              client_id: "",
-              is_private: false,
-            });
-          }}
-          className="gap-2"
-        >
-          <Plus size={18} />
-          Nouveau projet
-        </Button>
+        {projects.length >= PLAN_LIMITS[plan].projects ? (
+          <Button
+            onClick={() => toast.error(`Limite de ${PLAN_LIMITS[plan].projects} projets atteinte — upgradez votre plan dans les Paramètres`)}
+            variant="secondary"
+            className="gap-2 opacity-60"
+          >
+            <Lock size={16} />
+            Limite atteinte
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              setShowForm(true);
+              setEditingId(null);
+              setFormData({ name: "", color: "#3333FF", client_id: "", is_private: false });
+            }}
+            className="gap-2"
+          >
+            <Plus size={18} />
+            Nouveau projet
+          </Button>
+        )}
       </div>
 
       <AnimatePresence>

@@ -11,8 +11,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 const NAV_LINKS = [
-  { href: "/features", label: "Fonctionnalités" },
-  { href: "/pricing", label: "Tarifs" },
+  { href: "/#fonctionnalites", label: "Fonctionnalités" },
+  { href: "/#tarifs", label: "Tarifs" },
 ];
 
 export function Navbar() {
@@ -68,12 +68,7 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={cn(
-                "text-sm font-medium transition-colors duration-150",
-                pathname === link.href
-                  ? "text-[var(--brand-blue)]"
-                  : "text-gray-600 hover:text-[var(--brand-dark)]"
-              )}
+              className="text-sm font-medium text-gray-600 hover:text-[var(--brand-dark)] transition-colors duration-150"
             >
               {link.label}
             </Link>
@@ -83,11 +78,14 @@ export function Navbar() {
         {/* CTA */}
         <div className="flex items-center gap-3">
           {!loading && user ? (
-            <Button asChild variant="green" size="sm">
-              <Link href="/dashboard">
-                {user.user_metadata?.first_name || user.email?.split("@")[0]} →
-              </Link>
-            </Button>
+            <>
+              <span className="hidden md:block text-sm font-medium text-gray-600">
+                {user.email}
+              </span>
+              <Button asChild variant="green" size="sm">
+                <Link href="/dashboard">Mon Dashboard →</Link>
+              </Button>
+            </>
           ) : (
             <>
               <Link

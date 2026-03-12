@@ -32,7 +32,7 @@ export function HeroSection() {
             >
               <div className="w-2 h-2 rounded-full bg-[var(--brand-green)] animate-pulse" />
               <span className="text-xs font-semibold text-gray-600">
-                Alternative française à Toggl Track
+                Suivez vos heures. Facturez sans friction.
               </span>
             </motion.div>
 

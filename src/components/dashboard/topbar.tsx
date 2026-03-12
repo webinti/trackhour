@@ -11,7 +11,7 @@ export function TopBar({ profile }: TopBarProps) {
   const initials = profile?.full_name
     ?.split(" ")
     .map((n) => n[0])
-    .slice(0, 2)
+    .slice(0, 3)
     .join("")
     .toUpperCase() || "?";
 

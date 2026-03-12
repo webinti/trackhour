@@ -13,7 +13,7 @@ export default async function TimerRoute() {
   // Recent time entries
   const { data: timeEntries } = await supabase
     .from("time_entries")
-    .select(`*, projects(id, name, color, clients(name)), tasks(id, name, daily_rate)`)
+    .select(`*, projects(id, name, color, clients(name)), tasks(id, name, hourly_rate)`)
     .eq("user_id", user.id)
     .not("ended_at", "is", null)
     .order("started_at", { ascending: false })
