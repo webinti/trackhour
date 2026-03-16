@@ -294,7 +294,7 @@ export function TeamsPage({ teamId, plan = "free" }: TeamsPageProps) {
                     </div>
                     <div>
                       <h2 className="text-lg font-bold text-[var(--brand-dark)]">{team.name}</h2>
-                      <p className="text-sm text-gray-500 capitalize">Plan {team.plan}</p>
+                      <p className={cn("text-sm capitalize font-medium", team.plan === "business" ? "text-[var(--brand-yellow)]" : team.plan === "premium" ? "text-[var(--brand-blue)]" : "text-gray-500")}>Plan {team.plan}</p>
                     </div>
                   </div>
                   {isOwner && (
@@ -403,7 +403,7 @@ export function TeamsPage({ teamId, plan = "free" }: TeamsPageProps) {
                           </div>
                           <Link
                             href="/settings?tab=abonnement"
-                            className="relative overflow-hidden shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[var(--brand-purple)] hover:opacity-90 transition-all"
+                            className={cn("relative overflow-hidden shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold text-white hover:opacity-90 transition-all", teamPlan === "free" ? "bg-[var(--brand-purple)]" : "bg-[var(--brand-yellow)]")}
                           >
                             <motion.span
                               className="pointer-events-none absolute inset-0"

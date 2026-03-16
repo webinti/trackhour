@@ -197,8 +197,8 @@ export function Sidebar({ profile, counts, plan = "free" }: SidebarProps) {
             className="mx-3 mb-3"
           >
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-              <span className="w-2 h-2 rounded-full bg-[var(--brand-green)] shrink-0" />
-              <span className="text-xs font-semibold text-white/70 capitalize">Plan {plan}</span>
+              <span className={cn("w-2 h-2 rounded-full shrink-0", plan === "business" ? "bg-[var(--brand-yellow)]" : "bg-[var(--brand-green)]")} />
+              <span className={cn("text-xs font-semibold capitalize", plan === "business" ? "text-[var(--brand-yellow)]" : "text-white/70")}>Plan {plan}</span>
             </div>
           </motion.div>
         )}

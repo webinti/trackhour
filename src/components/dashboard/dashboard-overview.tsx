@@ -382,7 +382,7 @@ export function DashboardOverview({
                       <p className="text-sm font-semibold text-[var(--brand-dark)]">
                         {team.name}
                       </p>
-                      <p className="text-xs text-gray-400 capitalize">
+                      <p className={`text-xs capitalize font-medium ${team.plan === "business" ? "text-[var(--brand-yellow)]" : team.plan === "premium" ? "text-[var(--brand-blue)]" : "text-gray-400"}`}>
                         Plan {team.plan}
                       </p>
                     </div>

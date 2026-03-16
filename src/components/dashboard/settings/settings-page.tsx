@@ -56,7 +56,7 @@ const PLANS = [
     name: "Business",
     monthlyPrice: 15,
     yearlyPrice: 12,
-    borderColor: "border-[var(--brand-purple)]",
+    borderColor: "border-[var(--brand-yellow)]",
     icon: Building2,
     priceIds: { monthly: "business_monthly", yearly: "business_yearly" } as const,
     features: ["Projets illimités", "Clients illimités", "Membres illimités", "Export PDF ✓"],
@@ -429,7 +429,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                   "text-xs font-semibold px-2.5 py-1 rounded-full",
                   currentPlan === "free" && "bg-gray-100 text-gray-600",
                   currentPlan === "premium" && "bg-blue-50 text-[var(--brand-blue)]",
-                  currentPlan === "business" && "bg-purple-50 text-[var(--brand-purple)]",
+                  currentPlan === "business" && "bg-amber-50 text-[var(--brand-yellow)]",
                 )}>
                   Plan {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
                 </span>
@@ -472,7 +472,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                           {plan.icon && (
                             <plan.icon size={16} className={cn(
                               plan.key === "premium" && "text-[var(--brand-blue)]",
-                              plan.key === "business" && "text-[var(--brand-purple)]",
+                              plan.key === "business" && "text-[var(--brand-yellow)]",
                             )} />
                           )}
                           <span className="text-sm font-semibold text-[var(--brand-dark)]">{plan.name}</span>
@@ -494,7 +494,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                           className={cn(
                             "relative overflow-hidden mt-3 w-full py-2 rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-40",
                             plan.key === "premium" && "bg-[var(--brand-blue)] hover:bg-blue-700",
-                            plan.key === "business" && "bg-[var(--brand-purple)] hover:bg-purple-700",
+                            plan.key === "business" && "bg-[var(--brand-yellow)] hover:bg-amber-500",
                           )}>
                           {plan.key === "business" && (
                             <motion.span

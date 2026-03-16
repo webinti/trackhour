@@ -176,7 +176,7 @@ export function PricingSection() {
                 {plan.highlight ? (
                   <Link
                     href="/inscription"
-                    className="relative overflow-hidden block w-full rounded-lg py-2.5 bg-[var(--brand-purple)] hover:bg-purple-700 text-white text-sm font-semibold text-center transition-colors"
+                    className="relative overflow-hidden block w-full rounded-lg py-2.5 bg-[var(--brand-yellow)] hover:bg-amber-500 text-white text-sm font-semibold text-center transition-colors"
                   >
                     <motion.span
                       className="pointer-events-none absolute inset-0"
