@@ -17,10 +17,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Aucun abonnement trouvé" }, { status: 404 });
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://trackhour.vercel.app";
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: team.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
+      return_url: `${appUrl}/settings`,
     });
     return NextResponse.json({ url: session.url });
   } catch (err: any) {

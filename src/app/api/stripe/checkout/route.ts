@@ -48,14 +48,15 @@ export async function POST(req: NextRequest) {
     await supabase.from("teams").update({ stripe_customer_id: customerId }).eq("id", team.id);
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://trackhour.vercel.app";
   try {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?success=1`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
+      success_url: `${appUrl}/settings?success=1`,
+      cancel_url: `${appUrl}/settings`,
       metadata: { team_id: team.id },
       subscription_data: {
         metadata: { team_id: team.id },
