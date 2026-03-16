@@ -18,14 +18,13 @@ export default async function ProjetsRoute() {
   }
 
   // Get current team
-  const { data: teams } = await supabase
+  const { data: ownedTeams } = await supabase
     .from("teams")
-    .select("*")
+    .select("id, plan")
     .eq("owner_id", user.id)
-    .limit(1)
-    .single();
+    .limit(1);
 
-  const teamId = teams?.id;
+  const team = ownedTeams?.[0];
 
-  return <ProjectsPage teamId={teamId} plan={teams?.plan || "free"} />;
+  return <ProjectsPage teamId={team?.id} plan={(team?.plan as any) || "free"} />;
 }
