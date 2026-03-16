@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Edit2, UserPlus, X, Crown, Clock, Copy, Check, Lock } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { PLAN_LIMITS } from "@/lib/utils";
+import { PLAN_LIMITS, cn } from "@/lib/utils";
 import type { Plan } from "@/lib/utils";
 
 interface TeamMember {
