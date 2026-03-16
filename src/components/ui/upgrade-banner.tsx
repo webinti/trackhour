@@ -57,7 +57,7 @@ export function UpgradeBanner({
       </p>
 
       <Link
-        href="/parametres?tab=abonnement"
+        href="/settings?tab=abonnement"
         className={cn(
           "relative overflow-hidden shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
           variant === "limit"

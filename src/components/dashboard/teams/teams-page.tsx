@@ -402,7 +402,7 @@ export function TeamsPage({ teamId, plan = "free" }: TeamsPageProps) {
                             </p>
                           </div>
                           <Link
-                            href="/parametres?tab=abonnement"
+                            href="/settings?tab=abonnement"
                             className="relative overflow-hidden shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[var(--brand-purple)] hover:opacity-90 transition-all"
                           >
                             <motion.span

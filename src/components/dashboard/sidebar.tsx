@@ -163,7 +163,7 @@ export function Sidebar({ profile, counts, plan = "free" }: SidebarProps) {
               <p className="text-xs text-white/80 mb-3 leading-snug">
                 Débloquez les exports PDF, plus de projets et de clients.
               </p>
-              <Link href="/parametres?tab=abonnement" className="block w-full">
+              <Link href="/settings?tab=abonnement" className="block w-full">
                 <div className="relative overflow-hidden rounded-lg py-1.5 bg-white/20 hover:bg-white/30 transition-colors">
                   {/* Shimmer sweep toutes les 4s */}
                   <motion.span
@@ -207,10 +207,10 @@ export function Sidebar({ profile, counts, plan = "free" }: SidebarProps) {
       {/* Bottom */}
       <div className="px-3 pb-4 space-y-1 border-t border-white/10 pt-3">
         <Link
-          href="/parametres"
+          href="/settings"
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group",
-            pathname === "/parametres"
+            pathname === "/settings"
               ? "bg-white/15 text-white"
               : "text-white/50 hover:text-white hover:bg-white/8"
           )}

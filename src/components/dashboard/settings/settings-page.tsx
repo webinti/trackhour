@@ -105,7 +105,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
     if (searchParams.get("success") === "1") {
       toast.success("Abonnement activé ! Merci 🎉");
       setActiveTab("abonnement");
-      router.replace("/parametres");
+      router.replace("/settings");
     }
   }, [searchParams, router]);
 
@@ -236,8 +236,8 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else toast.error("Erreur lors de la création du paiement");
-    } catch { toast.error("Erreur réseau"); }
+      else toast.error(data.error || "Erreur lors de la création du paiement");
+    } catch (e) { toast.error("Erreur réseau : " + String(e)); }
     setCheckoutLoading(null);
   };
 
@@ -247,8 +247,8 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
       const res = await fetch("/api/stripe/portal", { method: "POST" });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else toast.error("Erreur lors de l'ouverture du portail");
-    } catch { toast.error("Erreur réseau"); }
+      else toast.error(data.error || "Erreur lors de l'ouverture du portail");
+    } catch (e) { toast.error("Erreur réseau : " + String(e)); }
     setPortalLoading(false);
   };
 

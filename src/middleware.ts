@@ -10,7 +10,7 @@ const PROTECTED_ROUTES = [
   "/clients",
   "/equipes",
   "/rapports",
-  "/parametres",
+  "/settings",
 ];
 
 export async function middleware(request: NextRequest) {

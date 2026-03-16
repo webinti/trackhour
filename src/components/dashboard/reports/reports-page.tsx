@@ -250,7 +250,7 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
           </div>
           {plan === "free" ? (
             <a
-              href="/parametres?tab=abonnement"
+              href="/settings?tab=abonnement"
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors"
               title="Export PDF réservé au plan Premium"
             >

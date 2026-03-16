@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/parametres?success=1`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/parametres`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?success=1`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
     metadata: { team_id: team.id },
     subscription_data: {
       metadata: { team_id: team.id },

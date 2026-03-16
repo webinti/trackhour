@@ -10,7 +10,7 @@ const BOTTOM_NAV_ITEMS = [
   { href: "/timer", icon: Timer, label: "Timer" },
   { href: "/projects", icon: FolderKanban, label: "Projets" },
   { href: "/clients", icon: Building2, label: "Clients" },
-  { href: "/parametres", icon: Settings, label: "Réglages" },
+  { href: "/settings", icon: Settings, label: "Réglages" },
 ];
 
 export function BottomNav() {

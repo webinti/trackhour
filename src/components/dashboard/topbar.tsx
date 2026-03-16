@@ -18,7 +18,7 @@ export function TopBar({ profile }: TopBarProps) {
     .toUpperCase() || "?";
 
   const Avatar = () => (
-    <Link href="/parametres">
+    <Link href="/settings">
       <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-purple)] flex items-center justify-center shrink-0">
         <span className="text-white text-xs font-bold">{initials}</span>
       </div>
