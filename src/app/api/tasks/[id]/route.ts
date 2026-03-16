@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const {
@@ -20,7 +21,7 @@ export async function PATCH(
   const { data, error } = await supabase
     .from("tasks")
     .update(body)
-    .eq("id", params.id)
+    .eq("id", id)
     .select();
 
   if (error) {
@@ -32,8 +33,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const {
@@ -44,7 +46,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { error } = await supabase.from("tasks").delete().eq("id", params.id);
+  const { error } = await supabase.from("tasks").delete().eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
