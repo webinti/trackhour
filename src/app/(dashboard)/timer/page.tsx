@@ -19,5 +19,5 @@ export default async function TimerRoute() {
     .order("started_at", { ascending: false })
     .limit(50);
 
-  return <TimerPage timeEntries={timeEntries || []} />;
+  return <TimerPage timeEntries={timeEntries || []} userId={user.id} />;
 }

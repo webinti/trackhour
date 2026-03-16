@@ -98,7 +98,7 @@ export function FeaturesSection() {
         </motion.div>
 
         {/* 2×2 Grid */}
-        <div className="grid grid-cols-2 gap-4 relative">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative">
           {FEATURES.map((feature, i) => (
             <motion.div
               key={feature.id}

@@ -1,1 +1,1 @@
-export { default } from "../(auth)/inscription/page";
+export { default } from "../inscription/page";

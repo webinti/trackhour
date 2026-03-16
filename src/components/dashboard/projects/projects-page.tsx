@@ -8,10 +8,11 @@ import { Toggle } from "@/components/ui/toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Edit2, Lock } from "lucide-react";
+import { Plus, Trash2, Edit2, Lock, Clock, Euro } from "lucide-react";
 import { toast } from "sonner";
-import { PLAN_LIMITS } from "@/lib/utils";
+import { PLAN_LIMITS, formatDuration, formatCurrency } from "@/lib/utils";
 import type { Plan } from "@/lib/utils";
+import { UpgradeBanner } from "@/components/ui/upgrade-banner";
 
 interface Client {
   id: string;
@@ -33,9 +34,15 @@ interface ProjectsPageProps {
   plan?: Plan;
 }
 
+interface ProjectStats {
+  totalSeconds: number;
+  monthEarnings: number;
+}
+
 export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [projectStats, setProjectStats] = useState<Record<string, ProjectStats>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -64,12 +71,22 @@ export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
     if (!teamId) return;
     setLoading(true);
 
-    const [clientsRes, projectsRes] = await Promise.all([
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const [clientsRes, projectsRes, entriesRes] = await Promise.all([
       supabase.from("clients").select("*").eq("team_id", teamId),
-      supabase
-        .from("projects")
-        .select("*")
-        .eq("team_id", teamId),
+      supabase.from("projects").select("*").eq("team_id", teamId).order("created_at", { ascending: false }),
+      user
+        ? supabase
+            .from("time_entries")
+            .select("project_id, started_at, ended_at, paused_duration, hourly_rate, tasks(hourly_rate)")
+            .eq("user_id", user.id)
+            .not("ended_at", "is", null)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     if (clientsRes.error) {
@@ -83,6 +100,21 @@ export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
     } else {
       setProjects(projectsRes.data || []);
     }
+
+    // Compute per-project stats
+    const stats: Record<string, ProjectStats> = {};
+    for (const entry of (entriesRes.data || []) as any[]) {
+      if (!entry.project_id) continue;
+      const rawMs = new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime();
+      const seconds = Math.max(0, rawMs / 1000 - (entry.paused_duration || 0));
+      const rate = entry.hourly_rate ?? entry.tasks?.hourly_rate ?? 0;
+      if (!stats[entry.project_id]) stats[entry.project_id] = { totalSeconds: 0, monthEarnings: 0 };
+      stats[entry.project_id].totalSeconds += seconds;
+      if (new Date(entry.started_at) >= monthStart) {
+        stats[entry.project_id].monthEarnings += rate ? (seconds / 3600) * rate : 0;
+      }
+    }
+    setProjectStats(stats);
 
     setLoading(false);
   }
@@ -172,16 +204,16 @@ export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
 
   if (!teamId) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <p className="text-gray-600">Veuillez sélectionner une équipe</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-[var(--brand-dark)]">Projets</h1>
+    <div className="p-4 md:p-8">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Projets</h1>
         {projects.length >= PLAN_LIMITS[plan].projects ? (
           <Button
             onClick={() => toast.error(`Limite de ${PLAN_LIMITS[plan].projects} projets atteinte — upgradez votre plan dans les Paramètres`)}
@@ -205,6 +237,19 @@ export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
           </Button>
         )}
       </div>
+
+      {/* Upsell banner */}
+      {plan === "free" && projects.length >= Math.floor(PLAN_LIMITS.free.projects * 0.7) && (
+        <UpgradeBanner
+          variant="limit"
+          message={
+            projects.length >= PLAN_LIMITS.free.projects
+              ? `Limite atteinte — ${PLAN_LIMITS.free.projects} projets sur ${PLAN_LIMITS.free.projects}. Passez à Premium pour en créer jusqu'à 20.`
+              : `${projects.length} projets sur ${PLAN_LIMITS.free.projects} utilisés — bientôt à la limite du plan Gratuit.`
+          }
+          className="mb-6"
+        />
+      )}
 
       <AnimatePresence>
         {showForm && (
@@ -324,7 +369,7 @@ export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
             >
               <div className="flex items-center gap-4">
                 <div
-                  className="w-4 h-4 rounded-full"
+                  className="w-4 h-4 rounded-full shrink-0"
                   style={{ backgroundColor: project.color }}
                 />
                 <div>
@@ -335,6 +380,20 @@ export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
                     {clients.find(c => c.id === project.client_id)?.name}{" "}
                     {project.is_private && "• Privé"}
                   </p>
+                  <div className="flex items-center gap-3 mt-1">
+                    {projectStats[project.id]?.totalSeconds > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <Clock size={11} />
+                        {formatDuration(Math.floor(projectStats[project.id].totalSeconds))}
+                      </span>
+                    )}
+                    {projectStats[project.id]?.monthEarnings > 0 && (
+                      <span className="flex items-center gap-1 text-xs font-medium text-[var(--brand-green)]">
+                        <Euro size={11} />
+                        {formatCurrency(projectStats[project.id].monthEarnings)} ce mois
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 

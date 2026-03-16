@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import type { Plan } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import type { Profile } from "@/lib/supabase/types";
 
 const NAV_ITEMS = [
@@ -43,9 +43,10 @@ interface SidebarCounts {
 interface SidebarProps {
   profile: Profile | null;
   counts?: SidebarCounts;
+  plan?: Plan;
 }
 
-export function Sidebar({ profile, counts }: SidebarProps) {
+export function Sidebar({ profile, counts, plan = "free" }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -61,7 +62,7 @@ export function Sidebar({ profile, counts }: SidebarProps) {
     <motion.aside
       animate={{ width: collapsed ? 72 : 240 }}
       transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="relative flex flex-col bg-[var(--brand-dark)] h-full shrink-0 overflow-hidden"
+      className="relative hidden md:flex flex-col bg-[var(--brand-dark)] h-full shrink-0 overflow-hidden"
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
@@ -146,6 +147,62 @@ export function Sidebar({ profile, counts }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* Upgrade card — free plan only */}
+      <AnimatePresence>
+        {!collapsed && plan === "free" && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2 }}
+            className="mx-3 mb-3"
+          >
+            <div className="rounded-xl p-3 bg-gradient-to-br from-[var(--brand-purple)] to-[var(--brand-blue)] text-white">
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/70 mb-1">Plan Gratuit</p>
+              <p className="text-xs text-white/80 mb-3 leading-snug">
+                Débloquez les exports PDF, plus de projets et de clients.
+              </p>
+              <Link href="/parametres?tab=abonnement" className="block w-full">
+                <div className="relative overflow-hidden rounded-lg py-1.5 bg-white/20 hover:bg-white/30 transition-colors">
+                  {/* Shimmer sweep toutes les 4s */}
+                  <motion.span
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.5) 50%, transparent 65%)",
+                    }}
+                    initial={{ x: "-100%" }}
+                    animate={{ x: "200%" }}
+                    transition={{
+                      duration: 0.7,
+                      ease: "easeInOut",
+                      repeat: Infinity,
+                      repeatDelay: 3.3,
+                    }}
+                  />
+                  <span className="relative block text-center text-xs font-bold text-white">
+                    Passer à Premium ✦
+                  </span>
+                </div>
+              </Link>
+            </div>
+          </motion.div>
+        )}
+        {!collapsed && plan !== "free" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="mx-3 mb-3"
+          >
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-[var(--brand-green)] shrink-0" />
+              <span className="text-xs font-semibold text-white/70 capitalize">Plan {plan}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom */}
       <div className="px-3 pb-4 space-y-1 border-t border-white/10 pt-3">

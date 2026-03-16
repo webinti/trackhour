@@ -297,11 +297,11 @@ export function HeaderTimer() {
     : null;
 
   return (
-    <div className="flex items-center gap-2 flex-1 mx-6">
+    <div className="flex items-center gap-1.5 md:gap-2 flex-1 mx-0 md:mx-4">
       {/* Description input */}
       <input
         type="text"
-        placeholder="Quelle tâche faites-vous actuellement ?"
+        placeholder="Tâche en cours..."
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         disabled={running}

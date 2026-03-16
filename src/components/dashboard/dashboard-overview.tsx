@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Clock, FolderKanban, Users, TrendingUp, Play, Plus, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,20 @@ import { formatDuration, formatDurationHuman } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { OnboardingBanner } from "@/components/dashboard/onboarding-banner";
+
+interface OnboardingState {
+  hasTeam: boolean;
+  hasProject: boolean;
+  hasClient: boolean;
+  hasTimer: boolean;
+}
 
 interface DashboardOverviewProps {
   teams: any[];
   activeTimer: any;
   recentEntries: any[];
+  onboarding?: OnboardingState;
 }
 
 function StatCard({
@@ -60,8 +69,31 @@ export function DashboardOverview({
   teams,
   activeTimer,
   recentEntries,
+  onboarding,
 }: DashboardOverviewProps) {
   const [elapsed, setElapsed] = useState(0);
+
+  // Tick the active timer display every second
+  useEffect(() => {
+    if (!activeTimer) return;
+    const startedAt = new Date(activeTimer.started_at).getTime();
+    const pausedDuration = activeTimer.paused_duration || 0;
+    const isPaused = !!activeTimer.paused_at;
+
+    if (isPaused) {
+      const pauseStartMs = new Date(activeTimer.paused_at).getTime();
+      setElapsed(Math.max(0, Math.floor((pauseStartMs - startedAt) / 1000) - pausedDuration));
+      return;
+    }
+
+    const update = () => {
+      setElapsed(Math.max(0, Math.floor((Date.now() - startedAt) / 1000) - pausedDuration));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [activeTimer]);
+
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [loadingTeam, setLoadingTeam] = useState(false);
@@ -130,6 +162,17 @@ export function DashboardOverview({
           Votre activité de la semaine
         </p>
       </motion.div>
+
+      {/* Onboarding */}
+      {onboarding && (
+        <OnboardingBanner
+          hasTeam={onboarding.hasTeam}
+          hasProject={onboarding.hasProject}
+          hasClient={onboarding.hasClient}
+          hasTimer={onboarding.hasTimer}
+          onCreateTeam={() => setShowCreateTeam(true)}
+        />
+      )}
 
       {/* Active Timer Banner */}
       {activeTimer && (
@@ -327,7 +370,7 @@ export function DashboardOverview({
                 {localTeams.map((team: any) => (
                   <Link
                     key={team.id}
-                    href={`/equipes/${team.id}`}
+                    href="/equipes"
                     className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-[var(--brand-blue)] hover:bg-blue-50/50 transition-all"
                   >
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-purple)] flex items-center justify-center shrink-0">
@@ -371,52 +414,89 @@ export function DashboardOverview({
                   Invitez vos collaborateurs et commencez à tracker ensemble
                 </p>
 
-                {!showCreateTeam ? (
-                  <Button
-                    onClick={() => setShowCreateTeam(true)}
-                    className="gap-2"
-                  >
-                    <Plus size={18} />
-                    Créer une équipe
-                  </Button>
-                ) : (
-                  <form onSubmit={handleCreateTeam} className="space-y-4 max-w-xs mx-auto">
-                    <div>
-                      <Input
-                        type="text"
-                        placeholder="Nom de l'équipe"
-                        value={teamName}
-                        onChange={(e) => setTeamName(e.target.value)}
-                        disabled={loadingTeam}
-                        autoFocus
-                      />
-                    </div>
-                    <div className="flex gap-2 justify-center">
-                      <Button
-                        type="submit"
-                        variant="green"
-                        disabled={loadingTeam || !teamName.trim()}
-                      >
-                        {loadingTeam ? "Création..." : "Créer"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => {
-                          setShowCreateTeam(false);
-                          setTeamName("");
-                        }}
-                      >
-                        <X size={18} />
-                      </Button>
-                    </div>
-                  </form>
-                )}
+                <Button onClick={() => setShowCreateTeam(true)} className="gap-2">
+                  <Plus size={18} />
+                  Créer une équipe
+                </Button>
               </div>
             </CardContent>
           </Card>
         </motion.div>
       )}
+
+      {/* Modal — créer une équipe */}
+      <AnimatePresence>
+        {showCreateTeam && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setShowCreateTeam(false); setTeamName(""); }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            />
+            {/* Dialog */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-0 flex items-center justify-center z-50 px-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h2 className="text-lg font-bold text-[var(--brand-dark)]">Créer une équipe</h2>
+                    <p className="text-sm text-gray-400 mt-0.5">Le point de départ de TrackHour</p>
+                  </div>
+                  <button
+                    onClick={() => { setShowCreateTeam(false); setTeamName(""); }}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateTeam} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Nom de l'équipe
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Ex : Agence Digitale, Mon Studio..."
+                      value={teamName}
+                      onChange={(e) => setTeamName(e.target.value)}
+                      disabled={loadingTeam}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="submit"
+                      variant="green"
+                      disabled={loadingTeam || !teamName.trim()}
+                      className="flex-1"
+                    >
+                      {loadingTeam ? "Création..." : "Créer l'équipe"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => { setShowCreateTeam(false); setTeamName(""); }}
+                    >
+                      Annuler
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

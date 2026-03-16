@@ -10,6 +10,9 @@ import { Plus, Trash2, Edit2, FolderOpen, Clock, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { formatDurationHuman, PLAN_LIMITS } from "@/lib/utils";
 import type { Plan } from "@/lib/utils";
+import { UpgradeBanner } from "@/components/ui/upgrade-banner";
+import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { PhoneInputField } from "@/components/ui/phone-input";
 
 interface TimeEntry {
   started_at: string;
@@ -169,16 +172,16 @@ export function ClientsPage({ teamId, plan = "free" }: ClientsPageProps) {
 
   if (!teamId) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <p className="text-gray-600">Veuillez sélectionner une équipe</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-[var(--brand-dark)]">Clients</h1>
+    <div className="p-4 md:p-8">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Clients</h1>
         {clients.length >= PLAN_LIMITS[plan].clients ? (
           <Button
             onClick={() => toast.error(`Limite de ${PLAN_LIMITS[plan].clients} clients atteinte — upgradez votre plan dans les Paramètres`)}
@@ -202,6 +205,19 @@ export function ClientsPage({ teamId, plan = "free" }: ClientsPageProps) {
           </Button>
         )}
       </div>
+
+      {/* Upsell banner */}
+      {plan === "free" && clients.length >= Math.floor(PLAN_LIMITS.free.clients * 0.7) && (
+        <UpgradeBanner
+          variant="limit"
+          message={
+            clients.length >= PLAN_LIMITS.free.clients
+              ? `Limite atteinte — ${PLAN_LIMITS.free.clients} clients sur ${PLAN_LIMITS.free.clients}. Passez à Premium pour en gérer jusqu'à 15.`
+              : `${clients.length} clients sur ${PLAN_LIMITS.free.clients} utilisés — bientôt à la limite du plan Gratuit.`
+          }
+          className="mb-6"
+        />
+      )}
 
       <AnimatePresence>
         {showForm && (
@@ -259,13 +275,9 @@ export function ClientsPage({ teamId, plan = "free" }: ClientsPageProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Adresse
                 </label>
-                <Input
-                  type="text"
-                  placeholder="123 Rue de la Paix, 75000 Paris"
+                <AddressAutocomplete
                   value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
+                  onChange={(val) => setFormData({ ...formData, address: val })}
                 />
               </div>
 
@@ -287,13 +299,9 @@ export function ClientsPage({ teamId, plan = "free" }: ClientsPageProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Téléphone
                   </label>
-                  <Input
-                    type="tel"
-                    placeholder="+33 1 23 45 67 89"
+                  <PhoneInputField
                     value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
+                    onChange={(val) => setFormData({ ...formData, phone: val })}
                   />
                 </div>
               </div>

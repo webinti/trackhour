@@ -6,12 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   User, ChevronDown, ChevronUp, Check, Zap, Building2,
-  ExternalLink, UserCircle, CreditCard,
+  ExternalLink, UserCircle, CreditCard, TriangleAlert,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AnimatePresence } from "framer-motion";
+import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { PhoneInputField } from "@/components/ui/phone-input";
 import type { Profile, Team } from "@/lib/supabase/types";
 
 interface SettingsPageProps {
@@ -20,12 +22,13 @@ interface SettingsPageProps {
   team: Team | null;
 }
 
-type Tab = "profil" | "entreprise" | "abonnement";
+type Tab = "profil" | "entreprise" | "abonnement" | "danger";
 
 const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "profil", label: "Profil", icon: UserCircle },
   { key: "entreprise", label: "Entreprise", icon: Building2 },
   { key: "abonnement", label: "Abonnement", icon: CreditCard },
+  { key: "danger", label: "Danger Zone", icon: TriangleAlert },
 ];
 
 const PLANS = [
@@ -87,6 +90,10 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
   const [companyAddress, setCompanyAddress] = useState(team?.company_address || "");
   const [companyEmail, setCompanyEmail] = useState(team?.company_email || "");
   const [savingCompany, setSavingCompany] = useState(false);
+
+  // Danger Zone
+  const [deleteInput, setDeleteInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   // Abonnement
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
@@ -202,6 +209,21 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
     setSavingCompany(false);
   };
 
+  // --- Handler Danger Zone ---
+  const handleDeleteAccount = async () => {
+    if (deleteInput !== "DELETE") return;
+    setDeleting(true);
+    const res = await fetch("/api/account/delete", { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || "Erreur lors de la suppression");
+      setDeleting(false);
+      return;
+    }
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
   // --- Handlers Abonnement ---
   const handleUpgrade = async (priceKey: string) => {
     setCheckoutLoading(priceKey);
@@ -231,20 +253,24 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
   };
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-[var(--brand-dark)] mb-6">Paramètres</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)] mb-5 md:mb-6">Paramètres</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white border border-[var(--border)] rounded-xl p-1 w-fit mb-8">
+      <div className="flex gap-1 bg-white border border-[var(--border)] rounded-xl p-1 w-fit mb-6 md:mb-8 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-              activeTab === tab.key
-                ? "bg-[var(--brand-dark)] text-white shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+              tab.key === "danger"
+                ? activeTab === "danger"
+                  ? "bg-red-500 text-white shadow-sm"
+                  : "text-red-400 hover:text-red-600"
+                : activeTab === tab.key
+                  ? "bg-[var(--brand-dark)] text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
             )}
           >
             <tab.icon size={15} />
@@ -291,7 +317,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--brand-dark)] mb-2">Téléphone</label>
-                <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="0600000000" className={inputClass} />
+                <PhoneInputField value={phoneNumber} onChange={setPhoneNumber} />
               </div>
 
               {/* Email accordion */}
@@ -369,9 +395,12 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--brand-dark)] mb-2">Adresse</label>
-                <textarea value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)}
-                  placeholder={"12 rue de la Paix\n75001 Paris"} rows={3}
-                  className={cn(inputClass, "resize-none")} />
+                <AddressAutocomplete
+                  value={companyAddress}
+                  onChange={setCompanyAddress}
+                  placeholder="12 rue de la Paix, 75001 Paris"
+                  className={inputClass}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--brand-dark)] mb-2">Email de contact</label>
@@ -461,11 +490,30 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                       {!isCurrent && priceKey && (
                         <button onClick={() => handleUpgrade(priceKey)} disabled={!!checkoutLoading}
                           className={cn(
-                            "mt-3 w-full py-2 rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-40",
+                            "relative overflow-hidden mt-3 w-full py-2 rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-40",
                             plan.key === "premium" && "bg-[var(--brand-blue)] hover:bg-blue-700",
                             plan.key === "business" && "bg-[var(--brand-purple)] hover:bg-purple-700",
                           )}>
-                          {checkoutLoading === priceKey ? "Chargement..." : `Passer au plan ${plan.name}`}
+                          {plan.key === "business" && (
+                            <motion.span
+                              className="pointer-events-none absolute inset-0"
+                              style={{
+                                background:
+                                  "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%)",
+                              }}
+                              initial={{ x: "-100%" }}
+                              animate={{ x: "200%" }}
+                              transition={{
+                                duration: 0.7,
+                                ease: "easeInOut",
+                                repeat: Infinity,
+                                repeatDelay: 3.3,
+                              }}
+                            />
+                          )}
+                          <span className="relative">
+                            {checkoutLoading === priceKey ? "Chargement..." : `Passer au plan ${plan.name}`}
+                          </span>
                         </button>
                       )}
                     </div>
@@ -479,6 +527,58 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                   <ExternalLink size={14} />
                   {portalLoading ? "Ouverture..." : "Gérer mon abonnement"}
                 </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ---- DANGER ZONE ---- */}
+        {activeTab === "danger" && (
+          <motion.div key="danger" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="bg-white rounded-2xl border-2 border-red-200 p-6 space-y-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                  <TriangleAlert size={20} className="text-red-500" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-red-600">Supprimer mon compte</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Cette action est <span className="font-semibold text-red-500">irréversible</span>. Toutes vos données (projets, clients, temps enregistrés, équipes) seront définitivement supprimées.
+                  </p>
+                </div>
+              </div>
+
+              {currentPlan !== "free" ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-sm font-medium text-amber-700">
+                    Vous avez un abonnement actif (Plan {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}).
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Veuillez d'abord résilier votre abonnement depuis l'onglet <button onClick={() => setActiveTab("abonnement")} className="underline font-semibold">Abonnement</button> avant de supprimer votre compte.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                    <p className="text-sm text-red-600">
+                      Pour confirmer la suppression, tapez <span className="font-mono font-bold">DELETE</span> dans le champ ci-dessous.
+                    </p>
+                  </div>
+                  <input
+                    type="text"
+                    value={deleteInput}
+                    onChange={(e) => setDeleteInput(e.target.value)}
+                    placeholder="Tapez DELETE pour confirmer"
+                    className="w-full border-2 border-red-200 rounded-xl px-4 py-2.5 text-sm font-mono text-red-700 placeholder-red-300 focus:outline-none focus:border-red-400 transition-all bg-red-50"
+                  />
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteInput !== "DELETE" || deleting}
+                    className="w-full py-3 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {deleting ? "Suppression en cours..." : "Supprimer définitivement mon compte"}
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>

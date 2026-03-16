@@ -116,7 +116,10 @@ function ConnexionForm() {
 
       <p className="text-center text-sm text-gray-500 mt-6">
         Pas encore de compte ?{" "}
-        <Link href="/inscription" className="font-semibold text-[var(--brand-blue)] hover:underline">
+        <Link
+          href={redirectTo !== "/dashboard" ? `/inscription?redirectTo=${encodeURIComponent(redirectTo)}` : "/inscription"}
+          className="font-semibold text-[var(--brand-blue)] hover:underline"
+        >
           Créer un compte gratuit
         </Link>
       </p>

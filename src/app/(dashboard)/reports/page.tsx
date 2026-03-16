@@ -13,13 +13,18 @@ export default async function ReportsRoute() {
   const twelveMonthsAgo = new Date();
   twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-  const { data: timeEntries } = await supabase
-    .from("time_entries")
-    .select("*, projects(id, name, color, clients(name)), tasks(id, name, hourly_rate)")
-    .eq("user_id", user.id)
-    .not("ended_at", "is", null)
-    .gte("started_at", twelveMonthsAgo.toISOString())
-    .order("started_at", { ascending: true });
+  const [{ data: timeEntries }, { data: ownedTeam }] = await Promise.all([
+    supabase
+      .from("time_entries")
+      .select("*, projects(id, name, color, clients(name)), tasks(id, name, hourly_rate)")
+      .eq("user_id", user.id)
+      .not("ended_at", "is", null)
+      .gte("started_at", twelveMonthsAgo.toISOString())
+      .order("started_at", { ascending: true }),
+    supabase.from("teams").select("plan").eq("owner_id", user.id).limit(1).single(),
+  ]);
 
-  return <ReportsPage timeEntries={timeEntries || []} />;
+  const plan = (ownedTeam as any)?.plan || "free";
+
+  return <ReportsPage timeEntries={timeEntries || []} plan={plan} />;
 }

@@ -73,6 +73,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Safe area for iOS bottom notch */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

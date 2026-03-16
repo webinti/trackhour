@@ -20,7 +20,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <h2 className="text-4xl font-extrabold text-white leading-tight mb-4">
             Chaque heure compte.
             <br />
-            <span className="text-white/60">Trackezles toutes.</span>
+            <span className="text-white/60">Trackez-les toutes.</span>
           </h2>
           <p className="text-white/60 text-lg">
             Rejoignez les équipes qui pilotent leur temps et leurs revenus avec TrackHour.

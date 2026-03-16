@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GoogleButton } from "@/components/ui/google-button";
 import { createClient } from "@/lib/supabase/client";
+import { useSearchParams } from "next/navigation";
 
-export default function InscriptionPage() {
+function InscriptionForm() {
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,12 +34,13 @@ export default function InscriptionPage() {
     }
 
     const supabase = createClient();
+    const callbackUrl = `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        emailRedirectTo: callbackUrl,
       },
     });
 
@@ -168,5 +173,13 @@ export default function InscriptionPage() {
         </Link>
       </p>
     </motion.div>
+  );
+}
+
+export default function InscriptionPage() {
+  return (
+    <Suspense fallback={<div className="h-96 animate-pulse bg-gray-100 rounded-2xl" />}>
+      <InscriptionForm />
+    </Suspense>
   );
 }

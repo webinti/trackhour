@@ -19,8 +19,8 @@ const swatchColors = ["#FBBF24", "#FF6EB4", "#FF6B35", "#7B3FE4"];
 export function HeroSection() {
   return (
     <section className="relative bg-[#F2F2F2] overflow-hidden min-h-[85vh] flex items-center">
-      <div className="max-w-6xl mx-auto px-8 py-20 w-full">
-        <div className="flex flex-col md:flex-row items-center gap-16 lg:gap-24">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-12 md:py-20 w-full">
+        <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 lg:gap-24">
 
           {/* ── Texte gauche ── */}
           <div className="flex-1 min-w-0 space-y-8 text-center md:text-left z-10">
@@ -67,7 +67,7 @@ export function HeroSection() {
                 <Link href="/inscription">Créez un compte gratuit →</Link>
               </Button>
               <Link
-                href="/tarifs"
+                href="/#tarifs"
                 className="text-sm font-medium text-gray-500 hover:text-[var(--brand-dark)] transition-colors"
               >
                 Voir les tarifs
@@ -98,37 +98,42 @@ export function HeroSection() {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="flex-shrink-0 w-full md:w-[420px] lg:w-[480px] relative"
+            className="hidden sm:block flex-shrink-0 w-full sm:w-[340px] md:w-[420px] lg:w-[500px] relative"
           >
-            {/* Background blob */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#3333FF] to-[#7B3FE4] rounded-3xl" />
+            {/* Background blob — taller */}
+            <div className="absolute inset-x-0 inset-y-[-20px] bg-gradient-to-br from-[#3333FF] to-[#7B3FE4] rounded-[2.5rem]" />
 
-            {/* Floating shapes */}
+            {/* Floating shapes — overflow visible */}
             <motion.div
-              animate={{ y: [0, -14, 0], rotate: [12, 20, 12] }}
+              animate={{ y: [0, -14, 0], rotate: [12, 22, 12] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-6 right-8 w-14 h-14 bg-[#FBBF24] rounded-2xl z-10"
+              className="absolute -top-4 -right-4 w-16 h-16 bg-[#FBBF24] rounded-2xl z-10 shadow-lg"
             />
             <motion.div
-              animate={{ y: [0, 10, 0] }}
+              animate={{ y: [0, 12, 0], rotate: [0, -10, 0] }}
               transition={{ duration: 4.5, delay: 1, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute bottom-10 right-6 w-10 h-10 bg-[#7B3FE4]/80 rounded-xl z-10"
+              className="absolute -bottom-4 right-2 w-12 h-12 bg-[#FF6EB4] rounded-2xl z-10 shadow-lg"
             />
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 6, delay: 0.5, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-[45%] right-4 w-4 h-4 bg-[#FF6EB4] rounded-full z-10"
+              className="absolute top-[40%] -right-3 w-5 h-5 bg-white/40 rounded-full z-10"
             />
             <motion.div
-              animate={{ y: [0, 6, 0] }}
+              animate={{ y: [0, 8, 0] }}
               transition={{ duration: 3.5, delay: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute bottom-[30%] left-10 w-3 h-3 bg-[#FBBF24] rounded-full z-10"
+              className="absolute top-[20%] -left-3 w-4 h-4 bg-[#FBBF24]/70 rounded-full z-10"
+            />
+            <motion.div
+              animate={{ y: [0, -6, 0], rotate: [-5, 5, -5] }}
+              transition={{ duration: 7, delay: 0.8, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute bottom-[20%] -left-5 w-10 h-10 bg-white/20 rounded-xl z-10"
             />
 
             {/* Mock UI Card + swatches */}
-            <div className="relative z-10 py-12 px-16 w-full">
+            <div className="relative z-10 py-14 px-14 w-full">
               {/* Color swatches */}
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col gap-2.5">
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 flex flex-col gap-2.5">
                 {swatchColors.map((color) => (
                   <motion.div
                     key={color}
@@ -139,9 +144,15 @@ export function HeroSection() {
                 ))}
               </div>
 
-              <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-4">
-                <p className="text-xs text-gray-400 font-medium">{mockUI.date}</p>
-                <p className="font-semibold text-[var(--brand-dark)] text-sm leading-snug">
+              <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-400 font-medium">{mockUI.date}</p>
+                  <span className="text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                    En cours
+                  </span>
+                </div>
+                <p className="font-bold text-[var(--brand-dark)] text-base leading-snug">
                   {mockUI.project}
                 </p>
                 <div className="flex items-center gap-2">
@@ -151,6 +162,14 @@ export function HeroSection() {
                   </span>
                 </div>
                 <div className="h-px bg-gray-100" />
+                {/* Timer row */}
+                <div className="flex items-center justify-between bg-blue-50 rounded-xl p-3.5">
+                  <div className="flex items-center gap-2">
+                    <Clock size={15} className="text-[var(--brand-blue)]" />
+                    <span className="text-sm font-medium text-[var(--brand-dark)]">Timer actif</span>
+                  </div>
+                  <span className="text-sm font-mono font-bold text-[var(--brand-blue)]">02:34:18</span>
+                </div>
                 <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3.5">
                   <div className="flex items-center gap-2">
                     <Clock size={15} className="text-gray-400" />
@@ -168,6 +187,11 @@ export function HeroSection() {
                   <span className="bg-[var(--brand-yellow)] text-white text-xs font-bold px-2.5 py-1 rounded-full">
                     {mockUI.plan}
                   </span>
+                </div>
+                {/* Earnings row */}
+                <div className="flex items-center justify-between bg-emerald-50 rounded-xl p-3.5">
+                  <span className="text-sm font-medium text-[var(--brand-dark)]">Gains du jour</span>
+                  <span className="text-sm font-bold text-[var(--brand-green)]">+340 €</span>
                 </div>
               </div>
             </div>

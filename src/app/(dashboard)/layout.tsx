@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { TopBar } from "@/components/dashboard/topbar";
+import { BottomNav } from "@/components/dashboard/bottom-nav";
 
 export default async function DashboardLayout({
   children,
@@ -21,7 +22,7 @@ export default async function DashboardLayout({
 
   // Fetch team IDs for this user
   const [{ data: ownedTeams }, { data: memberTeams }] = await Promise.all([
-    supabase.from("teams").select("id").eq("owner_id", user.id),
+    supabase.from("teams").select("id, plan").eq("owner_id", user.id),
     supabase.from("team_members").select("team_id").eq("user_id", user.id).eq("status", "active"),
   ]);
 
@@ -60,15 +61,18 @@ export default async function DashboardLayout({
     members: membersCount || 0,
   };
 
+  const plan = (ownedTeams?.[0] as any)?.plan || "free";
+
   return (
     <div className="flex h-screen bg-[#F2F2F2] overflow-hidden" suppressHydrationWarning>
-      <Sidebar profile={profile} counts={counts} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <Sidebar profile={profile} counts={counts} plan={plan} />
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopBar profile={profile} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
           {children}
         </main>
       </div>
+      <BottomNav />
     </div>
   );
 }

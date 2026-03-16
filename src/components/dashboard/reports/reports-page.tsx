@@ -7,9 +7,11 @@ import {
 } from "recharts";
 import { subDays, subMonths, parseISO, isAfter, format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Clock, TrendingUp, FolderKanban, Banknote } from "lucide-react";
+import { Clock, TrendingUp, FolderKanban, Banknote, Download, Lock } from "lucide-react";
 import { formatDuration, formatCurrency, calculateEarnings } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import type { Plan } from "@/lib/utils";
+import { UpgradeBanner } from "@/components/ui/upgrade-banner";
 
 type Period = "7j" | "30j" | "3m" | "12m";
 
@@ -37,15 +39,73 @@ function entryDuration(entry: any): number {
 
 interface ReportsPageProps {
   timeEntries: any[];
+  plan?: Plan;
 }
 
-export function ReportsPage({ timeEntries }: ReportsPageProps) {
+export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
   const [period, setPeriod] = useState<Period>("30j");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
+  const [exporting, setExporting] = useState(false);
+
+  const projects = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; color: string }>();
+    for (const e of timeEntries) {
+      if (e.project_id && e.projects?.name && !map.has(e.project_id)) {
+        map.set(e.project_id, { id: e.project_id, name: e.projects.name, color: e.projects.color || "#9CA3AF" });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [timeEntries]);
+
+  async function handleExportPDF() {
+    setExporting(true);
+    try {
+      const { pdf } = await import("@react-pdf/renderer");
+      const { PDFReport } = await import("./pdf-document");
+      const { format } = await import("date-fns");
+      const { fr } = await import("date-fns/locale");
+
+      const periodLabels: Record<Period, string> = {
+        "7j": "7 derniers jours",
+        "30j": "30 derniers jours",
+        "3m": "3 derniers mois",
+        "12m": "12 derniers mois",
+      };
+
+      const projectName = selectedProjectId !== "all"
+        ? projects.find((p) => p.id === selectedProjectId)?.name
+        : undefined;
+
+      const blob = await pdf(
+        <PDFReport
+          entries={filteredEntries}
+          periodLabel={periodLabels[period]}
+          generatedAt={format(new Date(), "dd MMMM yyyy", { locale: fr })}
+          projectLabel={projectName}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `trackhour-rapport-${period}-${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("PDF export error:", e);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const filteredEntries = useMemo(() => {
     const start = getPeriodStart(period);
-    return timeEntries.filter((e) => isAfter(parseISO(e.started_at), start));
-  }, [timeEntries, period]);
+    return timeEntries.filter((e) => {
+      if (!isAfter(parseISO(e.started_at), start)) return false;
+      if (selectedProjectId !== "all" && e.project_id !== selectedProjectId) return false;
+      return true;
+    });
+  }, [timeEntries, period, selectedProjectId]);
 
   const totalSeconds = useMemo(
     () => filteredEntries.reduce((acc, e) => acc + entryDuration(e), 0),
@@ -155,27 +215,69 @@ export function ReportsPage({ timeEntries }: ReportsPageProps) {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-[var(--brand-dark)]">Rapports</h1>
-        <div className="flex items-center gap-1 bg-white border border-[var(--border)] rounded-xl p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={cn(
-                "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-                period === p.value
-                  ? "bg-[var(--brand-dark)] text-white"
-                  : "text-gray-500 hover:text-gray-700"
-              )}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Rapports</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          {projects.length > 0 && (
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="h-9 px-3 rounded-xl border border-[var(--border)] bg-white text-sm text-[var(--brand-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
             >
-              {p.label}
+              <option value="all">Tous les projets</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
+          <div className="flex items-center gap-1 bg-white border border-[var(--border)] rounded-xl p-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                className={cn(
+                  "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+                  period === p.value
+                    ? "bg-[var(--brand-dark)] text-white"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {plan === "free" ? (
+            <a
+              href="/parametres?tab=abonnement"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors"
+              title="Export PDF réservé au plan Premium"
+            >
+              <Lock size={15} />
+              PDF
+            </a>
+          ) : (
+            <button
+              onClick={handleExportPDF}
+              disabled={exporting || filteredEntries.length === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--brand-blue)] hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Download size={15} />
+              {exporting ? "Export..." : "PDF"}
             </button>
-          ))}
+          )}
         </div>
       </div>
+
+      {/* PDF upsell for free users */}
+      {plan === "free" && (
+        <UpgradeBanner
+          variant="feature"
+          message="Export PDF réservé au plan Premium — téléchargez vos rapports de facturation en un clic."
+          className="mb-6"
+        />
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

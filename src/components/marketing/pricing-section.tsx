@@ -173,19 +173,37 @@ export function PricingSection() {
                 </div>
 
                 {/* CTA */}
-                <Button
-                  asChild
-                  variant={plan.highlight ? "default" : "secondary"}
-                  className={cn(
-                    plan.highlight
-                      ? "bg-[var(--brand-purple)] hover:bg-purple-700 text-white"
-                      : "bg-white text-[var(--brand-dark)] hover:bg-gray-100"
-                  )}
-                >
-                  <Link href="/inscription">
-                    {plan.cta} →
+                {plan.highlight ? (
+                  <Link
+                    href="/inscription"
+                    className="relative overflow-hidden block w-full rounded-lg py-2.5 bg-[var(--brand-purple)] hover:bg-purple-700 text-white text-sm font-semibold text-center transition-colors"
+                  >
+                    <motion.span
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background:
+                          "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%)",
+                      }}
+                      initial={{ x: "-100%" }}
+                      animate={{ x: "200%" }}
+                      transition={{
+                        duration: 0.7,
+                        ease: "easeInOut",
+                        repeat: Infinity,
+                        repeatDelay: 3.3,
+                      }}
+                    />
+                    <span className="relative">{plan.cta} →</span>
                   </Link>
-                </Button>
+                ) : (
+                  <Button
+                    asChild
+                    variant="secondary"
+                    className="bg-white text-[var(--brand-dark)] hover:bg-gray-100"
+                  >
+                    <Link href="/inscription">{plan.cta} →</Link>
+                  </Button>
+                )}
 
                 <div className="h-px bg-white/10" />
 

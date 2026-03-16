@@ -38,6 +38,25 @@ export default async function DashboardPage() {
   }
 
   const uniqueTeams = allTeams;
+  const firstTeamId = uniqueTeams[0]?.id;
+
+  // Onboarding checks (parallel)
+  const [{ count: projectCount }, { count: clientCount }, { count: timerCount }] = await Promise.all([
+    firstTeamId
+      ? supabase.from("projects").select("*", { count: "exact", head: true }).eq("team_id", firstTeamId)
+      : Promise.resolve({ count: 0 }),
+    firstTeamId
+      ? supabase.from("clients").select("*", { count: "exact", head: true }).eq("team_id", firstTeamId)
+      : Promise.resolve({ count: 0 }),
+    supabase.from("time_entries").select("*", { count: "exact", head: true }).eq("user_id", user.id).not("ended_at", "is", null),
+  ]);
+
+  const onboarding = {
+    hasTeam: uniqueTeams.length > 0,
+    hasProject: (projectCount || 0) > 0,
+    hasClient: (clientCount || 0) > 0,
+    hasTimer: (timerCount || 0) > 0,
+  };
 
   // Active timer
   const { data: activeTimer } = await supabase
@@ -65,6 +84,7 @@ export default async function DashboardPage() {
       teams={uniqueTeams || []}
       activeTimer={activeTimer}
       recentEntries={recentEntries || []}
+      onboarding={onboarding}
     />
   );
 }
