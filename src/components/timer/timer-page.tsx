@@ -346,13 +346,14 @@ export function TimerPage({ timeEntries, userId }: TimerPageProps) {
                           onClick={() => handleTogglePaid(entry.id, isPaid)}
                           title={isPaid ? "Marquer comme non payé" : "Marquer comme payé"}
                           className={cn(
-                            "w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                            isPaid
-                              ? "bg-[var(--brand-green)] border-[var(--brand-green)]"
-                              : "bg-white border-gray-300 hover:border-[var(--brand-green)]"
+                            "relative w-9 h-5 rounded-full shrink-0 transition-colors duration-200",
+                            isPaid ? "bg-[var(--brand-green)]" : "bg-gray-200 hover:bg-gray-300"
                           )}
                         >
-                          {isPaid && <Check size={11} strokeWidth={3} className="text-white" />}
+                          <span className={cn(
+                            "absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200",
+                            isPaid ? "translate-x-4" : "translate-x-0.5"
+                          )} />
                         </button>
 
                         {/* Actions */}
