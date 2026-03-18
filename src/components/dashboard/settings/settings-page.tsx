@@ -255,11 +255,11 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
   };
 
   return (
-    <div className="p-4 md:p-8">
+    <div>
       <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)] mb-5 md:mb-6">Paramètres</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white border border-[var(--border)] rounded-xl p-1 w-fit mb-6 md:mb-8 overflow-x-auto">
+      <div className="flex gap-1 bg-white border border-[var(--border)] rounded-xl p-1 w-full mb-6 md:mb-8 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.key}

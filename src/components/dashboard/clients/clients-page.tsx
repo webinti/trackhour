@@ -172,7 +172,7 @@ export function ClientsPage({ teamId, plan = "free" }: ClientsPageProps) {
 
   if (!teamId) {
     return (
-      <div className="p-4 md:p-8">
+      <div>
         <p className="text-gray-600">Veuillez sélectionner une équipe</p>
       </div>
     );

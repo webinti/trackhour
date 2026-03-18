@@ -211,7 +211,7 @@ export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div>
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Projets</h1>
         {projects.length >= PLAN_LIMITS[plan].projects ? (
