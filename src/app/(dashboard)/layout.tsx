@@ -35,11 +35,13 @@ export default async function DashboardLayout({
 
   // Fetch counts in parallel
   const [
+    { count: timersCount },
     { count: projectsCount },
     { count: clientsCount },
     { count: tasksCount },
     { count: membersCount },
   ] = await Promise.all([
+    supabase.from("time_entries").select("*", { count: "exact", head: true }).eq("user_id", user.id).not("ended_at", "is", null),
     allTeamIds.length > 0
       ? supabase.from("projects").select("*", { count: "exact", head: true }).in("team_id", allTeamIds)
       : Promise.resolve({ count: 0 }),
@@ -55,6 +57,7 @@ export default async function DashboardLayout({
   ]);
 
   const counts = {
+    timers: timersCount || 0,
     projects: projectsCount || 0,
     clients: clientsCount || 0,
     tasks: tasksCount || 0,

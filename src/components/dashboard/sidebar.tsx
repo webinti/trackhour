@@ -25,7 +25,7 @@ import type { Profile } from "@/lib/supabase/types";
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord", countKey: null },
-  { href: "/timer", icon: Timer, label: "Timer", countKey: null },
+  { href: "/timer", icon: Timer, label: "Timer", countKey: "timers" },
   { href: "/projects", icon: FolderKanban, label: "Projets", countKey: "projects" },
   { href: "/clients", icon: Building2, label: "Clients", countKey: "clients" },
   { href: "/tasks", icon: CheckSquare, label: "Tâches", countKey: "tasks" },
@@ -34,6 +34,7 @@ const NAV_ITEMS = [
 ] as const;
 
 interface SidebarCounts {
+  timers: number;
   projects: number;
   clients: number;
   tasks: number;
