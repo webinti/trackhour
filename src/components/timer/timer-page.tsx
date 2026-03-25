@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Trash2, Pencil, Check, X, ChevronDown } from "lucide-react";
+import { Play, Trash2, Pencil, Check, X, ChevronDown, Clock } from "lucide-react";
 import { formatDuration, formatCurrency, calculateEarnings } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
@@ -63,6 +63,8 @@ export function TimerPage({ timeEntries, userId }: TimerPageProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editRate, setEditRate] = useState<string>("");
+  const [editStartedAt, setEditStartedAt] = useState<string>("");
+  const [editEndedAt, setEditEndedAt] = useState<string>("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,21 +74,35 @@ export function TimerPage({ timeEntries, userId }: TimerPageProps) {
     setConfirmDeleteId(null);
   }, [supabase]);
 
+  const toLocalDatetime = (iso: string) => {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const handleStartEdit = useCallback((entry: any) => {
     setEditingId(entry.id);
     setEditDescription(entry.description || "");
     const rate = entry.hourly_rate ?? entry.tasks?.hourly_rate ?? null;
     setEditRate(rate != null ? rate.toString() : "");
+    setEditStartedAt(toLocalDatetime(entry.started_at));
+    setEditEndedAt(toLocalDatetime(entry.ended_at));
     setTimeout(() => editInputRef.current?.focus(), 0);
   }, []);
 
   const handleSaveEdit = useCallback(async (id: string) => {
     const parsedRate = parseFloat(editRate);
     const hourly_rate = !isNaN(parsedRate) && parsedRate > 0 ? parsedRate : null;
-    await supabase.from("time_entries").update({ description: editDescription || null, hourly_rate }).eq("id", id);
-    setEntries((prev) => prev.map((e) => e.id === id ? { ...e, description: editDescription || null, hourly_rate } : e));
+    const started_at = editStartedAt ? new Date(editStartedAt).toISOString() : undefined;
+    const ended_at = editEndedAt ? new Date(editEndedAt).toISOString() : undefined;
+    if (started_at && ended_at && new Date(ended_at) <= new Date(started_at)) return;
+    const updates: Record<string, any> = { description: editDescription || null, hourly_rate };
+    if (started_at) updates.started_at = started_at;
+    if (ended_at) updates.ended_at = ended_at;
+    await supabase.from("time_entries").update(updates).eq("id", id);
+    setEntries((prev) => prev.map((e) => e.id === id ? { ...e, ...updates } : e));
     setEditingId(null);
-  }, [supabase, editDescription, editRate]);
+  }, [supabase, editDescription, editRate, editStartedAt, editEndedAt]);
 
   const handleCancelEdit = useCallback(() => { setEditingId(null); }, []);
 
@@ -250,6 +266,32 @@ export function TimerPage({ timeEntries, userId }: TimerPageProps) {
                                   placeholder="Description..."
                                   className="w-full text-sm font-medium text-[var(--brand-dark)] bg-gray-50 border border-[var(--brand-blue)] rounded-lg px-3 py-1.5 focus:outline-none"
                                 />
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock size={12} className="text-gray-400 shrink-0" />
+                                    <input
+                                      type="datetime-local"
+                                      value={editStartedAt}
+                                      onChange={(e) => setEditStartedAt(e.target.value)}
+                                      className="text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[var(--brand-blue)]"
+                                    />
+                                    <span className="text-xs text-gray-400">→</span>
+                                    <input
+                                      type="datetime-local"
+                                      value={editEndedAt}
+                                      onChange={(e) => setEditEndedAt(e.target.value)}
+                                      className="text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[var(--brand-blue)]"
+                                    />
+                                    {editStartedAt && editEndedAt && new Date(editEndedAt) > new Date(editStartedAt) && (
+                                      <span className="text-xs font-mono text-gray-400">
+                                        {formatDuration(Math.floor((new Date(editEndedAt).getTime() - new Date(editStartedAt).getTime()) / 1000))}
+                                      </span>
+                                    )}
+                                    {editStartedAt && editEndedAt && new Date(editEndedAt) <= new Date(editStartedAt) && (
+                                      <span className="text-xs text-red-500">Fin doit être après début</span>
+                                    )}
+                                  </div>
+                                </div>
                                 <div className="flex items-center gap-2">
                                   <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 w-28">
                                     <input
