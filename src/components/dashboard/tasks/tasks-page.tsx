@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Edit2, X, Check, GripVertical } from "lucide-react";
+import { Plus, Trash2, Edit2, X, Check, GripVertical, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +64,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -73,6 +74,9 @@ export function TasksPage({ teamId }: TasksPageProps) {
     status: "todo" as Status,
   });
 
+  // Filter state
+  const [filterProjectId, setFilterProjectId] = useState<string>("");
+
   // Drag state
   const draggingId = useRef<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<Status | null>(null);
@@ -81,6 +85,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
   const supabase = createClient();
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
     if (teamId) fetchProjectsAndTasks();
   }, [teamId]);
 
@@ -130,7 +135,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
       } else {
         const { data, error } = await supabase
           .from("tasks")
-          .insert([{ project_id: formData.project_id, name: formData.name, status: formData.status }])
+          .insert([{ project_id: formData.project_id, name: formData.name, status: formData.status, created_by: userId }])
           .select("*, projects(id, name, color)")
           .single();
         if (error?.code || error?.message) throw error;
@@ -232,19 +237,58 @@ export function TasksPage({ teamId }: TasksPageProps) {
   return (
     <div className="p-4 md:p-8 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 md:mb-8 shrink-0">
-        <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Tâches</h1>
-        <Button
-          onClick={() => {
-            setShowForm(true);
-            setEditingId(null);
-            setFormData({ name: "", project_id: "", status: "todo" });
-          }}
-          className="gap-2"
-        >
-          <Plus size={18} />
-          Nouvelle tâche
-        </Button>
+      <div className="flex flex-col gap-4 mb-6 md:mb-8 shrink-0">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Tâches</h1>
+          <Button
+            onClick={() => {
+              setShowForm(true);
+              setEditingId(null);
+              setFormData({ name: "", project_id: "", status: "todo" });
+            }}
+            className="gap-2"
+          >
+            <Plus size={18} />
+            Nouvelle tâche
+          </Button>
+        </div>
+
+        {/* Filtre par projet */}
+        {projects.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter size={14} className="text-gray-400 shrink-0" />
+            <button
+              onClick={() => setFilterProjectId("")}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium transition-all border",
+                filterProjectId === ""
+                  ? "bg-[var(--brand-dark)] text-white border-transparent"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+              )}
+            >
+              Tous
+            </button>
+            {projects.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setFilterProjectId(filterProjectId === p.id ? "" : p.id)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium transition-all border truncate max-w-[150px]",
+                  filterProjectId === p.id
+                    ? "text-white border-transparent"
+                    : "bg-white border-gray-200 hover:border-gray-300"
+                )}
+                style={
+                  filterProjectId === p.id
+                    ? { backgroundColor: p.color, color: "#fff" }
+                    : { color: p.color }
+                }
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Form */}
@@ -328,7 +372,10 @@ export function TasksPage({ teamId }: TasksPageProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0 overflow-x-auto">
           {COLUMNS.map((col) => {
-            const colTasks = tasks.filter((t) => t.status === col.id);
+            const filtered = filterProjectId
+              ? tasks.filter((t) => t.project_id === filterProjectId)
+              : tasks;
+            const colTasks = filtered.filter((t) => t.status === col.id);
             const isOver = dragOverCol === col.id;
 
             return (
