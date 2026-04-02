@@ -5,30 +5,44 @@ import { motion } from "framer-motion";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { subDays, subMonths, parseISO, isAfter, format } from "date-fns";
+import {
+  startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear,
+  subMonths, parseISO, isAfter, isBefore, format, eachDayOfInterval, eachMonthOfInterval,
+} from "date-fns";
 import { fr } from "date-fns/locale";
-import { Clock, TrendingUp, FolderKanban, Banknote, Download, Lock } from "lucide-react";
+import { Clock, TrendingUp, FolderKanban, Banknote, Download, Lock, Calendar, CircleDollarSign } from "lucide-react";
 import { formatDuration, formatCurrency, calculateEarnings } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Plan } from "@/lib/utils";
 import { UpgradeBanner } from "@/components/ui/upgrade-banner";
 
-type Period = "7j" | "30j" | "3m" | "12m";
+type Period = "semaine" | "mois" | "trimestre" | "annee" | "custom";
+type PaidFilter = "all" | "paid" | "unpaid";
 
 const PERIODS: { label: string; value: Period }[] = [
-  { label: "7 jours", value: "7j" },
-  { label: "30 jours", value: "30j" },
-  { label: "3 mois", value: "3m" },
-  { label: "12 mois", value: "12m" },
+  { label: "Semaine", value: "semaine" },
+  { label: "Mois", value: "mois" },
+  { label: "Trimestre", value: "trimestre" },
+  { label: "Année", value: "annee" },
 ];
 
-function getPeriodStart(period: Period): Date {
+function getPeriodRange(period: Period): { start: Date; end: Date } {
   const now = new Date();
   switch (period) {
-    case "7j": return subDays(now, 7);
-    case "30j": return subDays(now, 30);
-    case "3m": return subMonths(now, 3);
-    case "12m": return subMonths(now, 12);
+    case "semaine":
+      return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    case "mois":
+      return { start: startOfMonth(now), end: endOfMonth(now) };
+    case "trimestre": {
+      const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
+      const quarterStart = new Date(now.getFullYear(), quarterMonth, 1);
+      const quarterEnd = endOfMonth(new Date(now.getFullYear(), quarterMonth + 2, 1));
+      return { start: quarterStart, end: quarterEnd };
+    }
+    case "annee":
+      return { start: startOfYear(now), end: endOfYear(now) };
+    case "custom":
+      return { start: now, end: now };
   }
 }
 
@@ -43,9 +57,12 @@ interface ReportsPageProps {
 }
 
 export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
-  const [period, setPeriod] = useState<Period>("30j");
+  const [period, setPeriod] = useState<Period>("mois");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
+  const [paidFilter, setPaidFilter] = useState<PaidFilter>("all");
   const [exporting, setExporting] = useState(false);
+  const [customStart, setCustomStart] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [customEnd, setCustomEnd] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
 
   const projects = useMemo(() => {
     const map = new Map<string, { id: string; name: string; color: string }>();
@@ -65,11 +82,13 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
       const { format } = await import("date-fns");
       const { fr } = await import("date-fns/locale");
 
+      const now = new Date();
       const periodLabels: Record<Period, string> = {
-        "7j": "7 derniers jours",
-        "30j": "30 derniers jours",
-        "3m": "3 derniers mois",
-        "12m": "12 derniers mois",
+        "semaine": `Semaine du ${format(startOfWeek(now, { weekStartsOn: 1 }), "dd MMM", { locale: fr })} au ${format(endOfWeek(now, { weekStartsOn: 1 }), "dd MMM yyyy", { locale: fr })}`,
+        "mois": format(now, "MMMM yyyy", { locale: fr }),
+        "trimestre": `T${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`,
+        "annee": `Année ${now.getFullYear()}`,
+        "custom": `Du ${format(parseISO(customStart), "dd/MM/yyyy")} au ${format(parseISO(customEnd), "dd/MM/yyyy")}`,
       };
 
       const projectName = selectedProjectId !== "all"
@@ -98,14 +117,26 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
     }
   }
 
+  const dateRange = useMemo(() => {
+    if (period === "custom") {
+      return {
+        start: parseISO(customStart),
+        end: new Date(parseISO(customEnd).getTime() + 86400000 - 1), // end of day
+      };
+    }
+    return getPeriodRange(period);
+  }, [period, customStart, customEnd]);
+
   const filteredEntries = useMemo(() => {
-    const start = getPeriodStart(period);
     return timeEntries.filter((e) => {
-      if (!isAfter(parseISO(e.started_at), start)) return false;
+      const date = parseISO(e.started_at);
+      if (isBefore(date, dateRange.start) || isAfter(date, dateRange.end)) return false;
       if (selectedProjectId !== "all" && e.project_id !== selectedProjectId) return false;
+      if (paidFilter === "paid" && e.is_paid !== true) return false;
+      if (paidFilter === "unpaid" && e.is_paid === true) return false;
       return true;
     });
-  }, [timeEntries, period, selectedProjectId]);
+  }, [timeEntries, dateRange, selectedProjectId, paidFilter]);
 
   const totalSeconds = useMemo(
     () => filteredEntries.reduce((acc, e) => acc + entryDuration(e), 0),
@@ -133,25 +164,14 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
     return sum / withRate.length;
   }, [filteredEntries]);
 
-  // Bar chart — by day (7j/30j) or by month (3m/12m)
+  // Bar chart — by day (semaine/mois/custom short) or by month (trimestre/annee/custom long)
   const chartData = useMemo(() => {
-    if (period === "7j" || period === "30j") {
-      const days = period === "7j" ? 7 : 30;
-      return Array.from({ length: days }, (_, i) => {
-        const date = subDays(new Date(), days - 1 - i);
-        const dayStr = format(date, "yyyy-MM-dd");
-        const seconds = filteredEntries
-          .filter((e) => e.started_at.startsWith(dayStr))
-          .reduce((acc, e) => acc + entryDuration(e), 0);
-        return {
-          label: format(date, period === "7j" ? "EEE" : "dd/MM", { locale: fr }),
-          heures: Math.round((seconds / 3600) * 100) / 100,
-        };
-      });
-    } else {
-      const months = period === "3m" ? 3 : 12;
-      return Array.from({ length: months }, (_, i) => {
-        const date = subMonths(new Date(), months - 1 - i);
+    const daysDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / 86400000);
+    const useMonths = daysDiff > 62;
+
+    if (useMonths) {
+      const months = eachMonthOfInterval({ start: dateRange.start, end: dateRange.end });
+      return months.map((date) => {
         const monthStr = format(date, "yyyy-MM");
         const seconds = filteredEntries
           .filter((e) => e.started_at.startsWith(monthStr))
@@ -161,8 +181,20 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
           heures: Math.round((seconds / 3600) * 100) / 100,
         };
       });
+    } else {
+      const days = eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
+      return days.map((date) => {
+        const dayStr = format(date, "yyyy-MM-dd");
+        const seconds = filteredEntries
+          .filter((e) => e.started_at.startsWith(dayStr))
+          .reduce((acc, e) => acc + entryDuration(e), 0);
+        return {
+          label: format(date, daysDiff <= 7 ? "EEE" : "dd/MM", { locale: fr }),
+          heures: Math.round((seconds / 3600) * 100) / 100,
+        };
+      });
     }
-  }, [filteredEntries, period]);
+  }, [filteredEntries, dateRange]);
 
   // By project
   const projectStats = useMemo(() => {
@@ -217,29 +249,55 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
   return (
     <div className="p-4 md:p-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Rapports</h1>
+      <div className="flex flex-col gap-3 mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Rapports</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            {projects.length > 0 && (
+              <select
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                className="h-9 px-3 rounded-xl border border-[var(--border)] bg-white text-sm text-[var(--brand-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
+              >
+                <option value="all">Tous les projets</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
+            {plan === "free" ? (
+              <a
+                href="/settings?tab=abonnement"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors"
+                title="Export PDF réservé au plan Premium"
+              >
+                <Lock size={15} />
+                PDF
+              </a>
+            ) : (
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting || filteredEntries.length === 0}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--brand-blue)] hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <Download size={15} />
+                {exporting ? "Export..." : "PDF"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filters row */}
         <div className="flex flex-wrap items-center gap-2">
-          {projects.length > 0 && (
-            <select
-              value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="h-9 px-3 rounded-xl border border-[var(--border)] bg-white text-sm text-[var(--brand-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
-            >
-              <option value="all">Tous les projets</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          )}
+          {/* Period pills */}
           <div className="flex items-center gap-1 bg-white border border-[var(--border)] rounded-xl p-1">
             {PERIODS.map((p) => (
               <button
                 key={p.value}
                 onClick={() => setPeriod(p.value)}
                 className={cn(
-                  "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-                  period === p.value
+                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                  period === p.value && period !== "custom"
                     ? "bg-[var(--brand-dark)] text-white"
                     : "text-gray-500 hover:text-gray-700"
                 )}
@@ -248,25 +306,61 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
               </button>
             ))}
           </div>
-          {plan === "free" ? (
-            <a
-              href="/settings?tab=abonnement"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors"
-              title="Export PDF réservé au plan Premium"
-            >
-              <Lock size={15} />
-              PDF
-            </a>
-          ) : (
-            <button
-              onClick={handleExportPDF}
-              disabled={exporting || filteredEntries.length === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--brand-blue)] hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <Download size={15} />
-              {exporting ? "Export..." : "PDF"}
-            </button>
-          )}
+
+          {/* Custom date range */}
+          <div className="flex items-center gap-1.5">
+            <Calendar size={14} className="text-gray-400 shrink-0" />
+            <input
+              type="date"
+              value={customStart}
+              onChange={(e) => { setCustomStart(e.target.value); setPeriod("custom"); }}
+              className={cn(
+                "h-9 px-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]",
+                period === "custom"
+                  ? "border-[var(--brand-blue)] bg-blue-50 text-[var(--brand-dark)]"
+                  : "border-[var(--border)] bg-white text-gray-500"
+              )}
+            />
+            <span className="text-xs text-gray-400">→</span>
+            <input
+              type="date"
+              value={customEnd}
+              onChange={(e) => { setCustomEnd(e.target.value); setPeriod("custom"); }}
+              className={cn(
+                "h-9 px-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]",
+                period === "custom"
+                  ? "border-[var(--brand-blue)] bg-blue-50 text-[var(--brand-dark)]"
+                  : "border-[var(--border)] bg-white text-gray-500"
+              )}
+            />
+          </div>
+
+          {/* Paid/Unpaid filter */}
+          <div className="flex items-center gap-1 bg-white border border-[var(--border)] rounded-xl p-1 ml-auto">
+            <CircleDollarSign size={14} className="text-gray-400 ml-1.5" />
+            {([
+              { value: "all" as PaidFilter, label: "Tous" },
+              { value: "paid" as PaidFilter, label: "Payé" },
+              { value: "unpaid" as PaidFilter, label: "Non payé" },
+            ]).map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setPaidFilter(f.value)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                  paidFilter === f.value
+                    ? f.value === "paid"
+                      ? "bg-emerald-500 text-white"
+                      : f.value === "unpaid"
+                        ? "bg-amber-500 text-white"
+                        : "bg-[var(--brand-dark)] text-white"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -302,7 +396,10 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
         {/* Bar chart */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-[var(--border)] p-6">
           <h2 className="text-sm font-bold text-[var(--brand-dark)] mb-5">
-            Heures par {period === "7j" || period === "30j" ? "jour" : "mois"}
+            Heures par {(() => {
+              const daysDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / 86400000);
+              return daysDiff > 62 ? "mois" : "jour";
+            })()}
           </h2>
           {filteredEntries.length === 0 ? (
             <div className="flex items-center justify-center h-[220px] text-gray-400 text-sm">
@@ -310,7 +407,7 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={chartData} barSize={period === "12m" ? 16 : 24}>
+              <BarChart data={chartData} barSize={period === "annee" ? 16 : 24}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                 <XAxis
                   dataKey="label"
