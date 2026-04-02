@@ -84,48 +84,78 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#D1D5DB",
   },
+  // Project sub-header
+  projectSubHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  projectDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  projectSubName: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: "#1A0B2E",
+    flex: 1,
+  },
+  projectSubTotal: {
+    fontSize: 8,
+    color: "#6B7280",
+  },
   // Table
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#F3F4F6",
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 4,
-    marginBottom: 2,
+    paddingVertical: 4,
+    marginBottom: 1,
   },
   tableRow: {
     flexDirection: "row",
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderBottom: "0.5px solid #F3F4F6",
   },
   tableRowAlt: {
     flexDirection: "row",
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     backgroundColor: "#FAFAFA",
     borderBottom: "0.5px solid #F3F4F6",
   },
-  colProject: { flex: 3 },
-  colEntries: { flex: 1, textAlign: "center" },
-  colHours: { flex: 1.5, textAlign: "right" },
-  colEarnings: { flex: 1.5, textAlign: "right" },
+  colDate: { width: 65 },
+  colDescription: { flex: 1 },
+  colTask: { width: 80 },
+  colHours: { width: 55, textAlign: "right" },
+  colEarnings: { width: 65, textAlign: "right" },
   headerText: {
-    fontSize: 8,
+    fontSize: 7,
     fontFamily: "Helvetica-Bold",
-    color: "#6B7280",
+    color: "#9CA3AF",
     textTransform: "uppercase",
   },
   cellText: {
-    fontSize: 9,
+    fontSize: 8,
     color: "#1A0B2E",
   },
   cellTextMuted: {
-    fontSize: 9,
+    fontSize: 8,
     color: "#6B7280",
   },
+  cellTextSmall: {
+    fontSize: 7,
+    color: "#9CA3AF",
+  },
   earningsText: {
-    fontSize: 9,
+    fontSize: 8,
     color: "#00D68F",
     fontFamily: "Helvetica-Bold",
   },
@@ -191,11 +221,17 @@ interface PDFReportProps {
 }
 
 export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: PDFReportProps) {
-  // Group by month → project
-  const monthMap: Record<string, Record<string, { name: string; color: string; seconds: number; earnings: number; count: number }>> = {};
+  // Group by month → project → entries
+  const monthMap: Record<string, Record<string, {
+    name: string;
+    color: string;
+    seconds: number;
+    earnings: number;
+    entries: any[];
+  }>> = {};
 
   for (const entry of entries) {
-    const monthKey = entry.started_at.substring(0, 7); // "2026-03"
+    const monthKey = entry.started_at.substring(0, 7);
     const projectKey = entry.project_id || "__none__";
     const projectName = entry.projects?.name || "Sans projet";
     const seconds = entryDuration(entry);
@@ -204,11 +240,21 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
 
     if (!monthMap[monthKey]) monthMap[monthKey] = {};
     if (!monthMap[monthKey][projectKey]) {
-      monthMap[monthKey][projectKey] = { name: projectName, color: entry.projects?.color || "#9CA3AF", seconds: 0, earnings: 0, count: 0 };
+      monthMap[monthKey][projectKey] = {
+        name: projectName,
+        color: entry.projects?.color || "#9CA3AF",
+        seconds: 0,
+        earnings: 0,
+        entries: [],
+      };
     }
     monthMap[monthKey][projectKey].seconds += seconds;
     monthMap[monthKey][projectKey].earnings += earnings;
-    monthMap[monthKey][projectKey].count += 1;
+    monthMap[monthKey][projectKey].entries.push({
+      ...entry,
+      _duration: seconds,
+      _earnings: earnings,
+    });
   }
 
   const months = Object.keys(monthMap).sort();
@@ -227,7 +273,7 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
         <View style={styles.header}>
           <Text style={styles.brandName}>TrackHour</Text>
           <View style={styles.reportMeta}>
-            <Text style={styles.reportTitle}>Rapport d'activité</Text>
+            <Text style={styles.reportTitle}>Rapport d&apos;activité</Text>
             {projectLabel && <Text style={styles.reportPeriod}>Projet : {projectLabel}</Text>}
             <Text style={styles.reportPeriod}>{periodLabel}</Text>
             <Text style={styles.reportPeriod}>Généré le {generatedAt}</Text>
@@ -254,7 +300,7 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
           </View>
         </View>
 
-        {/* Monthly breakdowns */}
+        {/* Monthly breakdowns with detailed entries */}
         {months.map((monthKey) => {
           const projects = Object.values(monthMap[monthKey]).sort((a, b) => b.seconds - a.seconds);
           const monthSeconds = projects.reduce((acc, p) => acc + p.seconds, 0);
@@ -262,37 +308,74 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
           const monthLabel = format(parseISO(`${monthKey}-01`), "MMMM yyyy", { locale: fr });
 
           return (
-            <View key={monthKey} style={styles.monthSection} wrap={false}>
+            <View key={monthKey} style={styles.monthSection}>
               {/* Month header */}
               <View style={styles.monthHeader}>
                 <Text style={styles.monthTitle}>{monthLabel}</Text>
-                <Text style={styles.monthTotal}>{formatSecs(monthSeconds)}{monthEarnings > 0 ? `  ·  ${formatEur(monthEarnings)}` : ""}</Text>
+                <Text style={styles.monthTotal}>
+                  {formatSecs(monthSeconds)}{monthEarnings > 0 ? `  ·  ${formatEur(monthEarnings)}` : ""}
+                </Text>
               </View>
 
-              {/* Table header */}
-              <View style={styles.tableHeader}>
-                <Text style={[styles.headerText, styles.colProject]}>Projet</Text>
-                <Text style={[styles.headerText, styles.colEntries]}>Entrées</Text>
-                <Text style={[styles.headerText, styles.colHours]}>Durée</Text>
-                <Text style={[styles.headerText, styles.colEarnings]}>Revenus</Text>
-              </View>
+              {/* Projects with their entries */}
+              {projects.map((p) => {
+                const sortedEntries = [...p.entries].sort(
+                  (a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime()
+                );
 
-              {/* Project rows */}
-              {projects.map((p, i) => (
-                <View key={p.name} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                  <Text style={[styles.cellText, styles.colProject]}>{p.name}</Text>
-                  <Text style={[styles.cellTextMuted, styles.colEntries]}>{p.count}</Text>
-                  <Text style={[styles.cellText, styles.colHours]}>{formatSecs(p.seconds)}</Text>
-                  <Text style={[p.earnings > 0 ? styles.earningsText : styles.cellTextMuted, styles.colEarnings]}>
-                    {p.earnings > 0 ? formatEur(p.earnings) : "—"}
-                  </Text>
-                </View>
-              ))}
+                return (
+                  <View key={p.name} wrap={false}>
+                    {/* Project sub-header */}
+                    <View style={styles.projectSubHeader}>
+                      <View style={[styles.projectDot, { backgroundColor: p.color }]} />
+                      <Text style={styles.projectSubName}>{p.name}</Text>
+                      <Text style={styles.projectSubTotal}>
+                        {sortedEntries.length} entrée{sortedEntries.length > 1 ? "s" : ""} · {formatSecs(p.seconds)}
+                        {p.earnings > 0 ? ` · ${formatEur(p.earnings)}` : ""}
+                      </Text>
+                    </View>
+
+                    {/* Column headers */}
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.headerText, styles.colDate]}>Date</Text>
+                      <Text style={[styles.headerText, styles.colDescription]}>Description</Text>
+                      <Text style={[styles.headerText, styles.colTask]}>Tâche</Text>
+                      <Text style={[styles.headerText, styles.colHours]}>Durée</Text>
+                      <Text style={[styles.headerText, styles.colEarnings]}>Montant</Text>
+                    </View>
+
+                    {/* Entry rows */}
+                    {sortedEntries.map((entry: any, i: number) => (
+                      <View key={entry.id} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                        <View style={styles.colDate}>
+                          <Text style={styles.cellText}>
+                            {format(parseISO(entry.started_at), "dd/MM/yyyy", { locale: fr })}
+                          </Text>
+                          <Text style={styles.cellTextSmall}>
+                            {format(parseISO(entry.started_at), "HH:mm")} – {format(parseISO(entry.ended_at), "HH:mm")}
+                          </Text>
+                        </View>
+                        <Text style={[styles.cellText, styles.colDescription]}>
+                          {entry.description || "—"}
+                        </Text>
+                        <Text style={[styles.cellTextMuted, styles.colTask]}>
+                          {entry.tasks?.name || "—"}
+                        </Text>
+                        <Text style={[styles.cellText, styles.colHours]}>
+                          {formatSecs(entry._duration)}
+                        </Text>
+                        <Text style={[entry._earnings > 0 ? styles.earningsText : styles.cellTextMuted, styles.colEarnings]}>
+                          {entry._earnings > 0 ? formatEur(entry._earnings) : "—"}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
 
               {/* Month total row */}
               <View style={styles.totalRow}>
-                <Text style={[styles.totalText, styles.colProject]}>Total</Text>
-                <Text style={[styles.totalText, styles.colEntries]}></Text>
+                <Text style={[styles.totalText, { flex: 1 }]}>Total {monthLabel}</Text>
                 <Text style={[styles.totalText, styles.colHours]}>{formatSecs(monthSeconds)}</Text>
                 <Text style={[monthEarnings > 0 ? styles.totalEarnings : styles.totalText, styles.colEarnings]}>
                   {monthEarnings > 0 ? formatEur(monthEarnings) : "—"}
@@ -301,6 +384,17 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
             </View>
           );
         })}
+
+        {/* Grand total */}
+        {months.length > 1 && (
+          <View style={[styles.totalRow, { marginTop: 8, borderTop: "2px solid #1A0B2E" }]}>
+            <Text style={[styles.totalText, { flex: 1, fontSize: 10 }]}>Total général</Text>
+            <Text style={[styles.totalText, styles.colHours, { fontSize: 10 }]}>{formatSecs(totalSeconds)}</Text>
+            <Text style={[totalEarnings > 0 ? styles.totalEarnings : styles.totalText, styles.colEarnings, { fontSize: 10 }]}>
+              {totalEarnings > 0 ? formatEur(totalEarnings) : "—"}
+            </Text>
+          </View>
+        )}
 
         {/* Footer */}
         <View style={styles.footer} fixed>
