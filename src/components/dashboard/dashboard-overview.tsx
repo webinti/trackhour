@@ -260,13 +260,13 @@ export function DashboardOverview({
                 </Link>
               </Button>
               <Button asChild variant="secondary" className="w-full justify-start gap-3">
-                <Link href="/projects/new">
+                <Link href="/projects?new=1">
                   <FolderKanban size={15} />
                   Nouveau projet
                 </Link>
               </Button>
               <Button asChild variant="secondary" className="w-full justify-start gap-3">
-                <Link href="/clients/new">
+                <Link href="/clients?new=1">
                   <Users size={15} />
                   Nouveau client
                 </Link>

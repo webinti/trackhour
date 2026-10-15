@@ -38,12 +38,13 @@ interface Client {
 interface ClientsPageProps {
   teamId?: string;
   plan?: Plan;
+  openForm?: boolean;
 }
 
-export function ClientsPage({ teamId, plan = "free" }: ClientsPageProps) {
+export function ClientsPage({ teamId, plan = "free", openForm = false }: ClientsPageProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(openForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -69,7 +70,8 @@ export function ClientsPage({ teamId, plan = "free" }: ClientsPageProps) {
     const { data, error } = await supabase
       .from("clients")
       .select("*, projects(id, time_entries(started_at, ended_at))")
-      .eq("team_id", teamId);
+      .eq("team_id", teamId)
+      .order("created_at", { ascending: false });
 
     if (error) {
       toast.error("Erreur lors de la récupération des clients");

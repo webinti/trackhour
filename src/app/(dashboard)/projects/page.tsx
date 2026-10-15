@@ -6,7 +6,12 @@ export const metadata = {
   title: "Projects — TrackHour",
 };
 
-export default async function ProjectsRoute() {
+export default async function ProjectsRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>;
+}) {
+  const { new: openNew } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -27,5 +32,11 @@ export default async function ProjectsRoute() {
 
   const teamId = teams?.id;
 
-  return <ProjectsPage teamId={teamId} />;
+  return (
+    <ProjectsPage
+      teamId={teamId}
+      plan={(teams?.plan as any) || "free"}
+      openForm={openNew === "1"}
+    />
+  );
 }

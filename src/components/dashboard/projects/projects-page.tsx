@@ -32,6 +32,7 @@ interface Project {
 interface ProjectsPageProps {
   teamId?: string;
   plan?: Plan;
+  openForm?: boolean;
 }
 
 interface ProjectStats {
@@ -39,12 +40,12 @@ interface ProjectStats {
   monthEarnings: number;
 }
 
-export function ProjectsPage({ teamId, plan = "free" }: ProjectsPageProps) {
+export function ProjectsPage({ teamId, plan = "free", openForm = false }: ProjectsPageProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [projectStats, setProjectStats] = useState<Record<string, ProjectStats>>({});
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(openForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
