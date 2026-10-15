@@ -27,5 +27,5 @@ export default async function TeamsRoute() {
 
   const teamId = teams?.id;
 
-  return <TeamsPage teamId={teamId} />;
+  return <TeamsPage teamId={teamId} plan={(teams?.plan as any) || "free"} />;
 }
