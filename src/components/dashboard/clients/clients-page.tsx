@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,7 @@ export function ClientsPage({ teamId, plan = "free", openForm = false }: Clients
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(openForm);
+  const topRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -158,6 +159,8 @@ export function ClientsPage({ teamId, plan = "free", openForm = false }: Clients
     });
     setEditingId(client.id);
     setShowForm(true);
+    // Remonte en haut de la page pour afficher le formulaire d'édition
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function getClientStats(client: Client) {
@@ -181,7 +184,7 @@ export function ClientsPage({ teamId, plan = "free", openForm = false }: Clients
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div ref={topRef} className="p-4 md:p-8 scroll-mt-6">
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Clients</h1>
         {clients.length >= PLAN_LIMITS[plan].clients ? (

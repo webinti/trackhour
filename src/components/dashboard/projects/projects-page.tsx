@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ export function ProjectsPage({ teamId, plan = "free", openForm = false }: Projec
   const [projectStats, setProjectStats] = useState<Record<string, ProjectStats>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(openForm);
+  const topRef = useRef<HTMLDivElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -201,6 +202,8 @@ export function ProjectsPage({ teamId, plan = "free", openForm = false }: Projec
     });
     setEditingId(project.id);
     setShowForm(true);
+    // Remonte en haut de la page pour afficher le formulaire d'édition
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   if (!teamId) {
@@ -212,7 +215,7 @@ export function ProjectsPage({ teamId, plan = "free", openForm = false }: Projec
   }
 
   return (
-    <div>
+    <div ref={topRef} className="scroll-mt-6">
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-[var(--brand-dark)]">Projets</h1>
         {projects.length >= PLAN_LIMITS[plan].projects ? (
