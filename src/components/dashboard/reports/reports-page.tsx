@@ -64,8 +64,6 @@ export function ReportsPage({ timeEntries, plan = "free", currency = "EUR" }: Re
   const [exporting, setExporting] = useState(false);
   const [customStart, setCustomStart] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [customEnd, setCustomEnd] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
-  const [pdfShowDescription, setPdfShowDescription] = useState(false);
-  const [pdfShowNotes, setPdfShowNotes] = useState(false);
   const currencySymbol = getCurrencySymbol(currency);
 
   const projects = useMemo(() => {
@@ -106,8 +104,6 @@ export function ReportsPage({ timeEntries, plan = "free", currency = "EUR" }: Re
           generatedAt={format(new Date(), "dd MMMM yyyy", { locale: fr })}
           projectLabel={projectName}
           currency={currency}
-          showTaskDescription={pdfShowDescription}
-          showTaskNotes={pdfShowNotes}
         />
       ).toBlob();
 
@@ -271,20 +267,6 @@ export function ReportsPage({ timeEntries, plan = "free", currency = "EUR" }: Re
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-            )}
-            {plan !== "free" && (
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
-                  <input type="checkbox" checked={pdfShowDescription} onChange={(e) => setPdfShowDescription(e.target.checked)}
-                    className="rounded border-gray-300 text-[var(--brand-blue)] focus:ring-[var(--brand-blue)] w-3.5 h-3.5" />
-                  Descriptions
-                </label>
-                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
-                  <input type="checkbox" checked={pdfShowNotes} onChange={(e) => setPdfShowNotes(e.target.checked)}
-                    className="rounded border-gray-300 text-[var(--brand-blue)] focus:ring-[var(--brand-blue)] w-3.5 h-3.5" />
-                  Notes
-                </label>
-              </div>
             )}
             {plan === "free" ? (
               <a

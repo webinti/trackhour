@@ -195,7 +195,11 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
         })
         .eq("id", team.id);
       if (error) toast.error("Erreur lors de la sauvegarde");
-      else toast.success("Informations entreprise mises à jour");
+      else {
+        toast.success("Informations entreprise mises à jour");
+        window.dispatchEvent(new CustomEvent("currency-change", { detail: currency }));
+        router.refresh();
+      }
     } else {
       // Créer une équipe si elle n'existe pas encore
       const { error } = await supabase.from("teams").insert({
@@ -207,7 +211,11 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
         currency,
       });
       if (error) toast.error("Erreur lors de la création");
-      else toast.success("Entreprise créée");
+      else {
+        toast.success("Entreprise créée");
+        window.dispatchEvent(new CustomEvent("currency-change", { detail: currency }));
+        router.refresh();
+      }
     }
     setSavingCompany(false);
   };
