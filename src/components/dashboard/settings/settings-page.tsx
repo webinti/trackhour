@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, CURRENCIES, type Currency } from "@/lib/utils";
 import { AnimatePresence } from "framer-motion";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { PhoneInputField } from "@/components/ui/phone-input";
@@ -89,6 +89,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
   const [companyName, setCompanyName] = useState(team?.company_name || "");
   const [companyAddress, setCompanyAddress] = useState(team?.company_address || "");
   const [companyEmail, setCompanyEmail] = useState(team?.company_email || "");
+  const [currency, setCurrency] = useState<Currency>((team?.currency as Currency) || "EUR");
   const [savingCompany, setSavingCompany] = useState(false);
 
   // Danger Zone
@@ -189,6 +190,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
           company_name: companyName || null,
           company_address: companyAddress || null,
           company_email: companyEmail || null,
+          currency,
           updated_at: new Date().toISOString(),
         })
         .eq("id", team.id);
@@ -202,6 +204,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
         company_name: companyName || null,
         company_address: companyAddress || null,
         company_email: companyEmail || null,
+        currency,
       });
       if (error) toast.error("Erreur lors de la création");
       else toast.success("Entreprise créée");
@@ -408,6 +411,21 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                 <label className="block text-sm font-medium text-[var(--brand-dark)] mb-2">Email de contact</label>
                 <input type="email" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)}
                   placeholder="contact@monentreprise.fr" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--brand-dark)] mb-2">Devise</label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as Currency)}
+                  className={inputClass}
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Utilisée pour l'affichage des montants et les rapports PDF.
+                </p>
               </div>
               <div className="border-t border-gray-100 pt-4">
                 <button onClick={handleSaveCompany} disabled={savingCompany}

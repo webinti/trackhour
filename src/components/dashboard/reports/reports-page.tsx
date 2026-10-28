@@ -11,9 +11,9 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Clock, TrendingUp, FolderKanban, Banknote, Download, Lock, Calendar, CircleDollarSign } from "lucide-react";
-import { formatDuration, formatCurrency, calculateEarnings } from "@/lib/utils";
+import { formatDuration, formatCurrency, calculateEarnings, getCurrencySymbol } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import type { Plan } from "@/lib/utils";
+import type { Plan, Currency } from "@/lib/utils";
 import { UpgradeBanner } from "@/components/ui/upgrade-banner";
 
 type Period = "semaine" | "mois" | "trimestre" | "annee" | "custom";
@@ -54,15 +54,19 @@ function entryDuration(entry: any): number {
 interface ReportsPageProps {
   timeEntries: any[];
   plan?: Plan;
+  currency?: Currency;
 }
 
-export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
+export function ReportsPage({ timeEntries, plan = "free", currency = "EUR" }: ReportsPageProps) {
   const [period, setPeriod] = useState<Period>("mois");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
   const [paidFilter, setPaidFilter] = useState<PaidFilter>("all");
   const [exporting, setExporting] = useState(false);
   const [customStart, setCustomStart] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [customEnd, setCustomEnd] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
+  const [pdfShowDescription, setPdfShowDescription] = useState(false);
+  const [pdfShowNotes, setPdfShowNotes] = useState(false);
+  const currencySymbol = getCurrencySymbol(currency);
 
   const projects = useMemo(() => {
     const map = new Map<string, { id: string; name: string; color: string }>();
@@ -101,6 +105,9 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
           periodLabel={periodLabels[period]}
           generatedAt={format(new Date(), "dd MMMM yyyy", { locale: fr })}
           projectLabel={projectName}
+          currency={currency}
+          showTaskDescription={pdfShowDescription}
+          showTaskNotes={pdfShowNotes}
         />
       ).toBlob();
 
@@ -225,7 +232,7 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
     },
     {
       label: "Revenus générés",
-      value: formatCurrency(totalEarnings),
+      value: formatCurrency(totalEarnings, currency),
       icon: TrendingUp,
       color: "text-[var(--brand-green)]",
       bg: "bg-emerald-50",
@@ -239,7 +246,7 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
     },
     {
       label: "Taux moyen",
-      value: avgRate > 0 ? `${Math.round(avgRate)}€/h` : "—",
+      value: avgRate > 0 ? `${Math.round(avgRate)}${currencySymbol}/h` : "—",
       icon: Banknote,
       color: "text-[var(--brand-pink)]",
       bg: "bg-pink-50",
@@ -264,6 +271,20 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
+            )}
+            {plan !== "free" && (
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                  <input type="checkbox" checked={pdfShowDescription} onChange={(e) => setPdfShowDescription(e.target.checked)}
+                    className="rounded border-gray-300 text-[var(--brand-blue)] focus:ring-[var(--brand-blue)] w-3.5 h-3.5" />
+                  Descriptions
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                  <input type="checkbox" checked={pdfShowNotes} onChange={(e) => setPdfShowNotes(e.target.checked)}
+                    className="rounded border-gray-300 text-[var(--brand-blue)] focus:ring-[var(--brand-blue)] w-3.5 h-3.5" />
+                  Notes
+                </label>
+              </div>
             )}
             {plan === "free" ? (
               <a
@@ -466,7 +487,7 @@ export function ReportsPage({ timeEntries, plan = "free" }: ReportsPageProps) {
                   </div>
                   {p.earnings > 0 && (
                     <p className="text-xs text-right text-[var(--brand-green)] mt-0.5">
-                      {formatCurrency(p.earnings)}
+                      {formatCurrency(p.earnings, currency)}
                     </p>
                   )}
                 </div>

@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Play, Square, Pause, Folder, Tag, ChevronDown, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatDuration, formatCurrency, calculateEarnings, PROJECT_COLORS } from "@/lib/utils";
+import { formatDuration, formatCurrency, calculateEarnings, PROJECT_COLORS, getCurrencySymbol } from "@/lib/utils";
+import type { Currency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Toggle } from "@/components/ui/toggle";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,7 @@ export function HeaderTimer() {
   const [newProjectLoading, setNewProjectLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [primaryTeamId, setPrimaryTeamId] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<Currency>("EUR");
 
   const projectPickerRef = useRef<HTMLDivElement>(null);
   const taskPickerRef = useRef<HTMLDivElement>(null);
@@ -98,9 +100,11 @@ export function HeaderTimer() {
 
       // Projects (owned teams + member teams)
       const [{ data: ownedTeams }, { data: memberTeams }] = await Promise.all([
-        supabase.from("teams").select("id").eq("owner_id", user.id),
+        supabase.from("teams").select("id, currency").eq("owner_id", user.id),
         supabase.from("team_members").select("team_id").eq("user_id", user.id).eq("status", "active"),
       ]);
+
+      if (ownedTeams?.[0]?.currency) setCurrency(ownedTeams[0].currency as Currency);
 
       const allTeamIds = [
         ...new Set([
@@ -448,13 +452,13 @@ export function HeaderTimer() {
           disabled={running}
           className="w-full text-xs text-[var(--brand-dark)] bg-transparent focus:outline-none disabled:cursor-default placeholder:text-gray-300"
         />
-        <span className="text-xs text-gray-400 shrink-0">€/h</span>
+        <span className="text-xs text-gray-400 shrink-0">{getCurrencySymbol(currency)}/h</span>
       </div>
 
       {/* Earnings live */}
       {earnings !== null && (
         <span className="hidden md:block text-xs font-semibold text-[var(--brand-green)] shrink-0">
-          {formatCurrency(earnings)}
+          {formatCurrency(earnings, currency)}
         </span>
       )}
 
