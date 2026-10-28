@@ -16,15 +16,16 @@ export default async function ReportsRoute() {
   const [{ data: timeEntries }, { data: ownedTeam }] = await Promise.all([
     supabase
       .from("time_entries")
-      .select("*, projects(id, name, color, clients(name)), tasks(id, name, hourly_rate)")
+      .select("*, projects(id, name, color, clients(name)), tasks(id, name, hourly_rate, description, notes)")
       .eq("user_id", user.id)
       .not("ended_at", "is", null)
       .gte("started_at", twelveMonthsAgo.toISOString())
       .order("started_at", { ascending: true }),
-    supabase.from("teams").select("plan").eq("owner_id", user.id).limit(1).single(),
+    supabase.from("teams").select("plan, currency").eq("owner_id", user.id).limit(1).single(),
   ]);
 
   const plan = (ownedTeam as any)?.plan || "free";
+  const currency = (ownedTeam as any)?.currency || "EUR";
 
-  return <ReportsPage timeEntries={timeEntries || []} plan={plan} />;
+  return <ReportsPage timeEntries={timeEntries || []} plan={plan} currency={currency} />;
 }

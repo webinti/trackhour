@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import type { Currency } from "@/lib/utils";
 
 const styles = StyleSheet.create({
   page: {
@@ -159,6 +160,26 @@ const styles = StyleSheet.create({
     color: "#00D68F",
     fontFamily: "Helvetica-Bold",
   },
+  taskDetailBlock: {
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    backgroundColor: "#F9FAFB",
+    borderLeft: "2px solid #E5E5E5",
+    marginLeft: 10,
+    marginBottom: 2,
+  },
+  taskDetailLabel: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: "#9CA3AF",
+    textTransform: "uppercase",
+    marginBottom: 1,
+  },
+  taskDetailText: {
+    fontSize: 8,
+    color: "#4B5563",
+    lineHeight: 1.4,
+  },
   // Total row
   totalRow: {
     flexDirection: "row",
@@ -204,8 +225,17 @@ function formatSecs(seconds: number): string {
   return `${h}h ${m}min`;
 }
 
-function formatEur(amount: number): string {
-  return `${amount.toFixed(2).replace(".", ",")} €`;
+function formatAmount(amount: number, currency: Currency = "EUR"): string {
+  const symbols: Record<Currency, { prefix: string; suffix: string; decimal: string }> = {
+    EUR: { prefix: "", suffix: " €", decimal: "," },
+    USD: { prefix: "$", suffix: "", decimal: "." },
+    AUD: { prefix: "A$", suffix: "", decimal: "." },
+    CAD: { prefix: "CA$", suffix: "", decimal: "." },
+    GBP: { prefix: "£", suffix: "", decimal: "." },
+  };
+  const s = symbols[currency];
+  const formatted = s.decimal === "," ? amount.toFixed(2).replace(".", ",") : amount.toFixed(2);
+  return `${s.prefix}${formatted}${s.suffix}`;
 }
 
 function entryDuration(entry: any): number {
@@ -218,9 +248,12 @@ interface PDFReportProps {
   periodLabel: string;
   generatedAt: string;
   projectLabel?: string;
+  currency?: Currency;
+  showTaskDescription?: boolean;
+  showTaskNotes?: boolean;
 }
 
-export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: PDFReportProps) {
+export function PDFReport({ entries, periodLabel, generatedAt, projectLabel, currency = "EUR", showTaskDescription = false, showTaskNotes = false }: PDFReportProps) {
   // Group by month → project → entries
   const monthMap: Record<string, Record<string, {
     name: string;
@@ -288,7 +321,7 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Revenus générés</Text>
-            <Text style={styles.statValue}>{formatEur(totalEarnings)}</Text>
+            <Text style={styles.statValue}>{formatAmount(totalEarnings, currency)}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Entrées</Text>
@@ -313,7 +346,7 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
               <View style={styles.monthHeader}>
                 <Text style={styles.monthTitle}>{monthLabel}</Text>
                 <Text style={styles.monthTotal}>
-                  {formatSecs(monthSeconds)}{monthEarnings > 0 ? `  ·  ${formatEur(monthEarnings)}` : ""}
+                  {formatSecs(monthSeconds)}{monthEarnings > 0 ? `  ·  ${formatAmount(monthEarnings, currency)}` : ""}
                 </Text>
               </View>
 
@@ -331,7 +364,7 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
                       <Text style={styles.projectSubName}>{p.name}</Text>
                       <Text style={styles.projectSubTotal}>
                         {sortedEntries.length} entrée{sortedEntries.length > 1 ? "s" : ""} · {formatSecs(p.seconds)}
-                        {p.earnings > 0 ? ` · ${formatEur(p.earnings)}` : ""}
+                        {p.earnings > 0 ? ` · ${formatAmount(p.earnings, currency)}` : ""}
                       </Text>
                     </View>
 
@@ -346,27 +379,41 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
 
                     {/* Entry rows */}
                     {sortedEntries.map((entry: any, i: number) => (
-                      <View key={entry.id} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                        <View style={styles.colDate}>
-                          <Text style={styles.cellText}>
-                            {format(parseISO(entry.started_at), "dd/MM/yyyy", { locale: fr })}
+                      <View key={entry.id}>
+                        <View style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                          <View style={styles.colDate}>
+                            <Text style={styles.cellText}>
+                              {format(parseISO(entry.started_at), "dd/MM/yyyy", { locale: fr })}
+                            </Text>
+                            <Text style={styles.cellTextSmall}>
+                              {format(parseISO(entry.started_at), "HH:mm")} – {format(parseISO(entry.ended_at), "HH:mm")}
+                            </Text>
+                          </View>
+                          <Text style={[styles.cellText, styles.colDescription]}>
+                            {entry.description || "—"}
                           </Text>
-                          <Text style={styles.cellTextSmall}>
-                            {format(parseISO(entry.started_at), "HH:mm")} – {format(parseISO(entry.ended_at), "HH:mm")}
+                          <Text style={[styles.cellTextMuted, styles.colTask]}>
+                            {entry.tasks?.name || "—"}
+                          </Text>
+                          <Text style={[styles.cellText, styles.colHours]}>
+                            {formatSecs(entry._duration)}
+                          </Text>
+                          <Text style={[entry._earnings > 0 ? styles.earningsText : styles.cellTextMuted, styles.colEarnings]}>
+                            {entry._earnings > 0 ? formatAmount(entry._earnings, currency) : "—"}
                           </Text>
                         </View>
-                        <Text style={[styles.cellText, styles.colDescription]}>
-                          {entry.description || "—"}
-                        </Text>
-                        <Text style={[styles.cellTextMuted, styles.colTask]}>
-                          {entry.tasks?.name || "—"}
-                        </Text>
-                        <Text style={[styles.cellText, styles.colHours]}>
-                          {formatSecs(entry._duration)}
-                        </Text>
-                        <Text style={[entry._earnings > 0 ? styles.earningsText : styles.cellTextMuted, styles.colEarnings]}>
-                          {entry._earnings > 0 ? formatEur(entry._earnings) : "—"}
-                        </Text>
+                        {showTaskDescription && entry.tasks?.description && (
+                          <View style={styles.taskDetailBlock}>
+                            <Text style={styles.taskDetailLabel}>Description</Text>
+                            <Text style={styles.taskDetailText}>{entry.tasks.description}</Text>
+                          </View>
+                        )}
+                        {showTaskNotes && entry.tasks?.notes && (
+                          <View style={styles.taskDetailBlock}>
+                            <Text style={styles.taskDetailLabel}>Notes</Text>
+                            <Text style={styles.taskDetailText}>{entry.tasks.notes}</Text>
+                          </View>
+                        )}
                       </View>
                     ))}
                   </View>
@@ -378,7 +425,7 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
                 <Text style={[styles.totalText, { flex: 1 }]}>Total {monthLabel}</Text>
                 <Text style={[styles.totalText, styles.colHours]}>{formatSecs(monthSeconds)}</Text>
                 <Text style={[monthEarnings > 0 ? styles.totalEarnings : styles.totalText, styles.colEarnings]}>
-                  {monthEarnings > 0 ? formatEur(monthEarnings) : "—"}
+                  {monthEarnings > 0 ? formatAmount(monthEarnings, currency) : "—"}
                 </Text>
               </View>
             </View>
@@ -391,7 +438,7 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel }: P
             <Text style={[styles.totalText, { flex: 1, fontSize: 10 }]}>Total général</Text>
             <Text style={[styles.totalText, styles.colHours, { fontSize: 10 }]}>{formatSecs(totalSeconds)}</Text>
             <Text style={[totalEarnings > 0 ? styles.totalEarnings : styles.totalText, styles.colEarnings, { fontSize: 10 }]}>
-              {totalEarnings > 0 ? formatEur(totalEarnings) : "—"}
+              {totalEarnings > 0 ? formatAmount(totalEarnings, currency) : "—"}
             </Text>
           </View>
         )}

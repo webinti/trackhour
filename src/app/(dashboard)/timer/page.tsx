@@ -10,14 +10,18 @@ export default async function TimerRoute() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  // Recent time entries
-  const { data: timeEntries } = await supabase
-    .from("time_entries")
-    .select(`*, projects(id, name, color, clients(name)), tasks(id, name, hourly_rate)`)
-    .eq("user_id", user.id)
-    .not("ended_at", "is", null)
-    .order("started_at", { ascending: false })
-    .limit(50);
+  const [{ data: timeEntries }, { data: ownedTeam }] = await Promise.all([
+    supabase
+      .from("time_entries")
+      .select(`*, projects(id, name, color, clients(name)), tasks(id, name, hourly_rate)`)
+      .eq("user_id", user.id)
+      .not("ended_at", "is", null)
+      .order("started_at", { ascending: false })
+      .limit(50),
+    supabase.from("teams").select("currency").eq("owner_id", user.id).limit(1).single(),
+  ]);
 
-  return <TimerPage timeEntries={timeEntries || []} userId={user.id} />;
+  const currency = (ownedTeam as any)?.currency || "EUR";
+
+  return <TimerPage timeEntries={timeEntries || []} userId={user.id} currency={currency} />;
 }

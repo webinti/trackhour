@@ -23,6 +23,8 @@ interface Task {
   id: string;
   name: string;
   hourly_rate?: number;
+  description?: string | null;
+  notes?: string | null;
   project_id: string;
   status: Status;
   projects: Project;
@@ -72,6 +74,8 @@ export function TasksPage({ teamId }: TasksPageProps) {
     name: "",
     project_id: "",
     status: "todo" as Status,
+    description: "",
+    notes: "",
   });
 
   // Filter state
@@ -123,19 +127,31 @@ export function TasksPage({ teamId }: TasksPageProps) {
       if (editingId) {
         const { error } = await supabase
           .from("tasks")
-          .update({ name: formData.name, status: formData.status })
+          .update({
+            name: formData.name,
+            status: formData.status,
+            description: formData.description || null,
+            notes: formData.notes || null,
+          })
           .eq("id", editingId);
         if (error) throw error;
         setTasks((prev) =>
           prev.map((t) =>
-            t.id === editingId ? { ...t, name: formData.name, status: formData.status } : t
+            t.id === editingId ? { ...t, name: formData.name, status: formData.status, description: formData.description || null, notes: formData.notes || null } : t
           )
         );
         toast.success("Tâche modifiée");
       } else {
         const { data, error } = await supabase
           .from("tasks")
-          .insert([{ project_id: formData.project_id, name: formData.name, status: formData.status, created_by: userId }])
+          .insert([{
+            project_id: formData.project_id,
+            name: formData.name,
+            status: formData.status,
+            description: formData.description || null,
+            notes: formData.notes || null,
+            created_by: userId,
+          }])
           .select("*, projects(id, name, color)")
           .single();
         if (error?.code || error?.message) throw error;
@@ -147,7 +163,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
         toast.success("Tâche créée");
       }
 
-      setFormData({ name: "", project_id: "", status: "todo" });
+      setFormData({ name: "", project_id: "", status: "todo", description: "", notes: "" });
       setEditingId(null);
       setShowForm(false);
     } catch (err) {
@@ -173,9 +189,12 @@ export function TasksPage({ teamId }: TasksPageProps) {
       name: task.name,
       project_id: task.project_id,
       status: task.status,
+      description: task.description || "",
+      notes: task.notes || "",
     });
     setEditingId(task.id);
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // ── Drag & Drop (HTML5 native) ────────────────────────────────────────────────
@@ -244,7 +263,7 @@ export function TasksPage({ teamId }: TasksPageProps) {
             onClick={() => {
               setShowForm(true);
               setEditingId(null);
-              setFormData({ name: "", project_id: "", status: "todo" });
+              setFormData({ name: "", project_id: "", status: "todo", description: "", notes: "" });
             }}
             className="gap-2"
           >
@@ -342,6 +361,30 @@ export function TasksPage({ teamId }: TasksPageProps) {
                   />
                 </div>
 
+              </div>
+
+              {/* Description et notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description des travaux</label>
+                  <textarea
+                    placeholder="Détail des travaux en cours..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] text-sm resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
+                  <textarea
+                    placeholder="Notes internes, remarques..."
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] text-sm resize-none"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-2 pt-1">
@@ -499,6 +542,18 @@ function TaskCard({
           {task.name}
         </p>
       </div>
+
+      {/* Description + notes preview */}
+      {(task.description || task.notes) && (
+        <div className="ml-5 mt-1.5 space-y-0.5">
+          {task.description && (
+            <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{task.description}</p>
+          )}
+          {task.notes && (
+            <p className="text-xs text-gray-400 italic line-clamp-1">{task.notes}</p>
+          )}
+        </div>
+      )}
 
       {/* Project + rate */}
       <div className="flex items-center gap-2 mt-2 ml-5">

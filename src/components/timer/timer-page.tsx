@@ -3,7 +3,8 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Trash2, Pencil, Check, X, ChevronDown, Clock } from "lucide-react";
-import { formatDuration, formatCurrency, calculateEarnings } from "@/lib/utils";
+import { formatDuration, formatCurrency, calculateEarnings, getCurrencySymbol } from "@/lib/utils";
+import type { Currency } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 interface TimerPageProps {
   timeEntries: any[];
   userId: string;
+  currency?: Currency;
 }
 
 type FilterType = "all" | "paid" | "unpaid";
@@ -33,9 +35,10 @@ function formatGroupDate(dateStr: string): string {
   return format(date, "EEEE d MMMM", { locale: fr });
 }
 
-export function TimerPage({ timeEntries, userId }: TimerPageProps) {
+export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPageProps) {
   const supabase = createClient();
   const [entries, setEntries] = useState(timeEntries);
+  const currencySymbol = getCurrencySymbol(currency);
 
   useEffect(() => {
     const channel = supabase
@@ -218,7 +221,7 @@ export function TimerPage({ timeEntries, userId }: TimerPageProps) {
                   <div className="flex items-center gap-3">
                     {totalEarnings > 0 && (
                       <span className="text-sm font-semibold text-[var(--brand-green)]">
-                        {formatCurrency(totalEarnings)}
+                        {formatCurrency(totalEarnings, currency)}
                       </span>
                     )}
                     <span className="text-sm font-mono font-semibold text-gray-400">
@@ -307,7 +310,7 @@ export function TimerPage({ timeEntries, userId }: TimerPageProps) {
                                       step="0.5"
                                       className="w-full text-xs text-[var(--brand-dark)] bg-transparent focus:outline-none placeholder:text-gray-300"
                                     />
-                                    <span className="text-xs text-gray-400 shrink-0">€/h</span>
+                                    <span className="text-xs text-gray-400 shrink-0">{currencySymbol}/h</span>
                                   </div>
                                   <button
                                     onClick={() => handleSaveEdit(entry.id)}
@@ -359,7 +362,7 @@ export function TimerPage({ timeEntries, userId }: TimerPageProps) {
                                       </span>
                                     )}
                                     {entryRate && (
-                                      <span className="text-xs text-gray-300 shrink-0">{entryRate}€/h</span>
+                                      <span className="text-xs text-gray-300 shrink-0">{entryRate}{currencySymbol}/h</span>
                                     )}
                                   </div>
 
@@ -367,7 +370,7 @@ export function TimerPage({ timeEntries, userId }: TimerPageProps) {
                                   <div className="flex items-center gap-2 shrink-0">
                                     {earnings !== null && (
                                       <span className="text-xs font-semibold text-[var(--brand-green)]">
-                                        {formatCurrency(earnings)}
+                                        {formatCurrency(earnings, currency)}
                                       </span>
                                     )}
 

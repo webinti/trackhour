@@ -20,11 +20,33 @@ export function formatDurationHuman(seconds: number): string {
   return `${h}h ${m}min`;
 }
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("fr-FR", {
+export type Currency = "EUR" | "USD" | "AUD" | "CAD" | "GBP";
+
+export const CURRENCIES: { code: Currency; label: string; symbol: string }[] = [
+  { code: "EUR", label: "Euro (€)", symbol: "€" },
+  { code: "USD", label: "Dollar US ($)", symbol: "$" },
+  { code: "AUD", label: "Dollar australien (A$)", symbol: "A$" },
+  { code: "CAD", label: "Dollar canadien (CA$)", symbol: "CA$" },
+  { code: "GBP", label: "Livre sterling (£)", symbol: "£" },
+];
+
+const CURRENCY_LOCALES: Record<Currency, string> = {
+  EUR: "fr-FR",
+  USD: "en-US",
+  AUD: "en-AU",
+  CAD: "en-CA",
+  GBP: "en-GB",
+};
+
+export function formatCurrency(amount: number, currency: Currency = "EUR"): string {
+  return new Intl.NumberFormat(CURRENCY_LOCALES[currency], {
     style: "currency",
-    currency: "EUR",
+    currency,
   }).format(amount);
+}
+
+export function getCurrencySymbol(currency: Currency = "EUR"): string {
+  return CURRENCIES.find((c) => c.code === currency)?.symbol ?? "€";
 }
 
 export function calculateEarnings(seconds: number, hourlyRate: number): number {

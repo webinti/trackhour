@@ -53,6 +53,7 @@ export interface Database {
           company_name: string | null;
           company_address: string | null;
           company_email: string | null;
+          currency: string;
           created_at: string;
           updated_at: string;
         };
@@ -68,6 +69,7 @@ export interface Database {
           company_name?: string | null;
           company_address?: string | null;
           company_email?: string | null;
+          currency?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -81,6 +83,7 @@ export interface Database {
           company_name?: string | null;
           company_address?: string | null;
           company_email?: string | null;
+          currency?: string;
           updated_at?: string;
         };
       };
@@ -176,6 +179,8 @@ export interface Database {
           project_id: string;
           name: string;
           hourly_rate: number | null;
+          description: string | null;
+          notes: string | null;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -185,6 +190,8 @@ export interface Database {
           project_id: string;
           name: string;
           hourly_rate?: number | null;
+          description?: string | null;
+          notes?: string | null;
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -192,6 +199,8 @@ export interface Database {
         Update: {
           name?: string;
           hourly_rate?: number | null;
+          description?: string | null;
+          notes?: string | null;
           updated_at?: string;
         };
       };
