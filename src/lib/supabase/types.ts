@@ -212,6 +212,8 @@ export interface Database {
           user_id: string;
           description: string | null;
           hourly_rate: number | null;
+          work_description: string | null;
+          work_notes: string | null;
           started_at: string;
           ended_at: string | null;
           paused_at: string | null;
@@ -225,6 +227,8 @@ export interface Database {
           user_id: string;
           description?: string | null;
           hourly_rate?: number | null;
+          work_description?: string | null;
+          work_notes?: string | null;
           started_at: string;
           ended_at?: string | null;
           paused_at?: string | null;
@@ -236,6 +240,8 @@ export interface Database {
           project_id?: string | null;
           description?: string | null;
           hourly_rate?: number | null;
+          work_description?: string | null;
+          work_notes?: string | null;
           started_at?: string;
           ended_at?: string | null;
           paused_at?: string | null;

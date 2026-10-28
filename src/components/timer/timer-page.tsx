@@ -65,6 +65,8 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState("");
+  const [editWorkDescription, setEditWorkDescription] = useState("");
+  const [editWorkNotes, setEditWorkNotes] = useState("");
   const [editRate, setEditRate] = useState<string>("");
   const [editStartedAt, setEditStartedAt] = useState<string>("");
   const [editEndedAt, setEditEndedAt] = useState<string>("");
@@ -86,6 +88,8 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
   const handleStartEdit = useCallback((entry: any) => {
     setEditingId(entry.id);
     setEditDescription(entry.description || "");
+    setEditWorkDescription(entry.work_description || "");
+    setEditWorkNotes(entry.work_notes || "");
     const rate = entry.hourly_rate ?? entry.tasks?.hourly_rate ?? null;
     setEditRate(rate != null ? rate.toString() : "");
     setEditStartedAt(toLocalDatetime(entry.started_at));
@@ -99,7 +103,7 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
     const started_at = editStartedAt ? new Date(editStartedAt).toISOString() : undefined;
     const ended_at = editEndedAt ? new Date(editEndedAt).toISOString() : undefined;
     if (started_at && ended_at && new Date(ended_at) <= new Date(started_at)) return;
-    const updates: Record<string, any> = { description: editDescription || null, hourly_rate };
+    const updates: Record<string, any> = { description: editDescription || null, hourly_rate, work_description: editWorkDescription || null, work_notes: editWorkNotes || null };
     if (started_at) updates.started_at = started_at;
     if (ended_at) updates.ended_at = ended_at;
     await supabase.from("time_entries").update(updates).eq("id", id);
@@ -269,6 +273,20 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
                                   placeholder="Description..."
                                   className="w-full text-sm font-medium text-[var(--brand-dark)] bg-gray-50 border border-[var(--brand-blue)] rounded-lg px-3 py-1.5 focus:outline-none"
                                 />
+                                <textarea
+                                  value={editWorkDescription}
+                                  onChange={(e) => setEditWorkDescription(e.target.value)}
+                                  placeholder="Description des travaux en cours..."
+                                  rows={2}
+                                  className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
+                                />
+                                <textarea
+                                  value={editWorkNotes}
+                                  onChange={(e) => setEditWorkNotes(e.target.value)}
+                                  placeholder="Notes internes..."
+                                  rows={2}
+                                  className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
+                                />
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <div className="flex items-center gap-1.5">
                                     <Clock size={12} className="text-gray-400 shrink-0" />
@@ -340,6 +358,18 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
                                     {formatDuration(Math.floor(duration))}
                                   </span>
                                 </div>
+
+                                {/* Work description + notes */}
+                                {(entry.work_description || entry.work_notes) && (
+                                  <div className="mt-1 space-y-0.5">
+                                    {entry.work_description && (
+                                      <p className="text-xs text-gray-500 line-clamp-2">{entry.work_description}</p>
+                                    )}
+                                    {entry.work_notes && (
+                                      <p className="text-xs text-gray-400 italic line-clamp-1">{entry.work_notes}</p>
+                                    )}
+                                  </div>
+                                )}
 
                                 {/* Row 2: metadata + earnings + controls */}
                                 <div className="flex items-center justify-between gap-2 mt-1.5">

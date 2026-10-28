@@ -402,16 +402,16 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel, cur
                             {entry._earnings > 0 ? formatAmount(entry._earnings, currency) : "—"}
                           </Text>
                         </View>
-                        {showTaskDescription && entry.tasks?.description && (
+                        {showTaskDescription && (entry.work_description || entry.tasks?.description) && (
                           <View style={styles.taskDetailBlock}>
-                            <Text style={styles.taskDetailLabel}>Description</Text>
-                            <Text style={styles.taskDetailText}>{entry.tasks.description}</Text>
+                            <Text style={styles.taskDetailLabel}>Description des travaux</Text>
+                            <Text style={styles.taskDetailText}>{entry.work_description || entry.tasks.description}</Text>
                           </View>
                         )}
-                        {showTaskNotes && entry.tasks?.notes && (
+                        {showTaskNotes && (entry.work_notes || entry.tasks?.notes) && (
                           <View style={styles.taskDetailBlock}>
                             <Text style={styles.taskDetailLabel}>Notes</Text>
-                            <Text style={styles.taskDetailText}>{entry.tasks.notes}</Text>
+                            <Text style={styles.taskDetailText}>{entry.work_notes || entry.tasks.notes}</Text>
                           </View>
                         )}
                       </View>
