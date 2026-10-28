@@ -35,6 +35,28 @@ function formatGroupDate(dateStr: string): string {
   return format(date, "EEEE d MMMM", { locale: fr });
 }
 
+function ReportToggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex items-center gap-2 text-xs text-gray-500 select-none"
+    >
+      <span
+        className={cn(
+          "flex items-center w-7 h-4 rounded-full px-0.5 transition-colors duration-200",
+          checked ? "bg-[var(--brand-blue)] justify-end" : "bg-gray-200 justify-start"
+        )}
+      >
+        <span className="w-3 h-3 bg-white rounded-full shadow-sm" />
+      </span>
+      {label}
+    </button>
+  );
+}
+
 export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPageProps) {
   const supabase = createClient();
   const [entries, setEntries] = useState(timeEntries);
@@ -67,6 +89,8 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
   const [editDescription, setEditDescription] = useState("");
   const [editWorkDescription, setEditWorkDescription] = useState("");
   const [editWorkNotes, setEditWorkNotes] = useState("");
+  const [editShowWorkDescription, setEditShowWorkDescription] = useState(false);
+  const [editShowWorkNotes, setEditShowWorkNotes] = useState(false);
   const [editRate, setEditRate] = useState<string>("");
   const [editStartedAt, setEditStartedAt] = useState<string>("");
   const [editEndedAt, setEditEndedAt] = useState<string>("");
@@ -90,6 +114,8 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
     setEditDescription(entry.description || "");
     setEditWorkDescription(entry.work_description || "");
     setEditWorkNotes(entry.work_notes || "");
+    setEditShowWorkDescription(entry.show_work_description === true);
+    setEditShowWorkNotes(entry.show_work_notes === true);
     const rate = entry.hourly_rate ?? entry.tasks?.hourly_rate ?? null;
     setEditRate(rate != null ? rate.toString() : "");
     setEditStartedAt(toLocalDatetime(entry.started_at));
@@ -103,13 +129,13 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
     const started_at = editStartedAt ? new Date(editStartedAt).toISOString() : undefined;
     const ended_at = editEndedAt ? new Date(editEndedAt).toISOString() : undefined;
     if (started_at && ended_at && new Date(ended_at) <= new Date(started_at)) return;
-    const updates: Record<string, any> = { description: editDescription || null, hourly_rate, work_description: editWorkDescription || null, work_notes: editWorkNotes || null };
+    const updates: Record<string, any> = { description: editDescription || null, hourly_rate, work_description: editWorkDescription || null, work_notes: editWorkNotes || null, show_work_description: editShowWorkDescription, show_work_notes: editShowWorkNotes };
     if (started_at) updates.started_at = started_at;
     if (ended_at) updates.ended_at = ended_at;
     await supabase.from("time_entries").update(updates).eq("id", id);
     setEntries((prev) => prev.map((e) => e.id === id ? { ...e, ...updates } : e));
     setEditingId(null);
-  }, [supabase, editDescription, editRate, editStartedAt, editEndedAt]);
+  }, [supabase, editDescription, editWorkDescription, editWorkNotes, editShowWorkDescription, editShowWorkNotes, editRate, editStartedAt, editEndedAt]);
 
   const handleCancelEdit = useCallback(() => { setEditingId(null); }, []);
 
@@ -273,20 +299,34 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
                                   placeholder="Description..."
                                   className="w-full text-sm font-medium text-[var(--brand-dark)] bg-gray-50 border border-[var(--brand-blue)] rounded-lg px-3 py-1.5 focus:outline-none"
                                 />
-                                <textarea
-                                  value={editWorkDescription}
-                                  onChange={(e) => setEditWorkDescription(e.target.value)}
-                                  placeholder="Description des travaux en cours..."
-                                  rows={2}
-                                  className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
-                                />
-                                <textarea
-                                  value={editWorkNotes}
-                                  onChange={(e) => setEditWorkNotes(e.target.value)}
-                                  placeholder="Notes internes..."
-                                  rows={2}
-                                  className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
-                                />
+                                <div className="space-y-1">
+                                  <textarea
+                                    value={editWorkDescription}
+                                    onChange={(e) => setEditWorkDescription(e.target.value)}
+                                    placeholder="Description des travaux en cours..."
+                                    rows={2}
+                                    className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
+                                  />
+                                  <ReportToggle
+                                    checked={editShowWorkDescription}
+                                    onChange={setEditShowWorkDescription}
+                                    label="Afficher la description dans le rapport PDF"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <textarea
+                                    value={editWorkNotes}
+                                    onChange={(e) => setEditWorkNotes(e.target.value)}
+                                    placeholder="Notes internes..."
+                                    rows={2}
+                                    className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
+                                  />
+                                  <ReportToggle
+                                    checked={editShowWorkNotes}
+                                    onChange={setEditShowWorkNotes}
+                                    label="Afficher les notes dans le rapport PDF"
+                                  />
+                                </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <div className="flex items-center gap-1.5">
                                     <Clock size={12} className="text-gray-400 shrink-0" />

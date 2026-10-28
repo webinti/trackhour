@@ -249,11 +249,9 @@ interface PDFReportProps {
   generatedAt: string;
   projectLabel?: string;
   currency?: Currency;
-  showTaskDescription?: boolean;
-  showTaskNotes?: boolean;
 }
 
-export function PDFReport({ entries, periodLabel, generatedAt, projectLabel, currency = "EUR", showTaskDescription = false, showTaskNotes = false }: PDFReportProps) {
+export function PDFReport({ entries, periodLabel, generatedAt, projectLabel, currency = "EUR" }: PDFReportProps) {
   // Group by month → project → entries
   const monthMap: Record<string, Record<string, {
     name: string;
@@ -402,16 +400,16 @@ export function PDFReport({ entries, periodLabel, generatedAt, projectLabel, cur
                             {entry._earnings > 0 ? formatAmount(entry._earnings, currency) : "—"}
                           </Text>
                         </View>
-                        {showTaskDescription && (entry.work_description || entry.tasks?.description) && (
+                        {entry.show_work_description && entry.work_description && (
                           <View style={styles.taskDetailBlock}>
                             <Text style={styles.taskDetailLabel}>Description des travaux</Text>
-                            <Text style={styles.taskDetailText}>{entry.work_description || entry.tasks.description}</Text>
+                            <Text style={styles.taskDetailText}>{entry.work_description}</Text>
                           </View>
                         )}
-                        {showTaskNotes && (entry.work_notes || entry.tasks?.notes) && (
+                        {entry.show_work_notes && entry.work_notes && (
                           <View style={styles.taskDetailBlock}>
                             <Text style={styles.taskDetailLabel}>Notes</Text>
-                            <Text style={styles.taskDetailText}>{entry.work_notes || entry.tasks.notes}</Text>
+                            <Text style={styles.taskDetailText}>{entry.work_notes}</Text>
                           </View>
                         )}
                       </View>

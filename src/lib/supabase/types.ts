@@ -214,6 +214,8 @@ export interface Database {
           hourly_rate: number | null;
           work_description: string | null;
           work_notes: string | null;
+          show_work_description: boolean;
+          show_work_notes: boolean;
           started_at: string;
           ended_at: string | null;
           paused_at: string | null;
@@ -229,6 +231,8 @@ export interface Database {
           hourly_rate?: number | null;
           work_description?: string | null;
           work_notes?: string | null;
+          show_work_description?: boolean;
+          show_work_notes?: boolean;
           started_at: string;
           ended_at?: string | null;
           paused_at?: string | null;
@@ -242,6 +246,8 @@ export interface Database {
           hourly_rate?: number | null;
           work_description?: string | null;
           work_notes?: string | null;
+          show_work_description?: boolean;
+          show_work_notes?: boolean;
           started_at?: string;
           ended_at?: string | null;
           paused_at?: string | null;

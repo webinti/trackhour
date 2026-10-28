@@ -44,6 +44,12 @@ export function HeaderTimer() {
   const projectPickerRef = useRef<HTMLDivElement>(null);
   const taskPickerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const onCurrencyChange = (e: Event) => setCurrency((e as CustomEvent<Currency>).detail);
+    window.addEventListener("currency-change", onCurrencyChange);
+    return () => window.removeEventListener("currency-change", onCurrencyChange);
+  }, []);
+
   // Close pickers on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
