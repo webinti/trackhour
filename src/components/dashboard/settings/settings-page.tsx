@@ -44,8 +44,8 @@ const PLANS = [
   {
     key: "premium" as const,
     name: "Premium",
-    monthlyPrice: 4.5,
-    yearlyPrice: 4.05,
+    monthlyPrice: 5,
+    yearlyPrice: 4.5,
     borderColor: "border-[var(--brand-blue)]",
     icon: Zap,
     priceIds: { monthly: "premium_monthly", yearly: "premium_yearly" } as const,

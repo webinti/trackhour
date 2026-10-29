@@ -29,8 +29,8 @@ const PLANS = [
     id: "premium",
     name: "Premium",
     description: "Idéal pour les solopreneurs",
-    monthlyPrice: 4.5,
-    yearlyPrice: 4.5 * 12 * 0.9,
+    monthlyPrice: 5,
+    yearlyPrice: 54,
     badge: "-10 %",
     badgeColor: "bg-[var(--brand-green)]",
     features: [
