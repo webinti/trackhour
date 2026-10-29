@@ -44,8 +44,8 @@ const PLANS = [
   {
     key: "premium" as const,
     name: "Premium",
-    monthlyPrice: 4.5,
-    yearlyPrice: 4.05,
+    monthlyPrice: 5,
+    yearlyPrice: 4.5,
     borderColor: "border-[var(--brand-blue)]",
     icon: Zap,
     priceIds: { monthly: "premium_monthly", yearly: "premium_yearly" } as const,
@@ -54,8 +54,8 @@ const PLANS = [
   {
     key: "business" as const,
     name: "Business",
-    monthlyPrice: 15,
-    yearlyPrice: 12,
+    monthlyPrice: 19,
+    yearlyPrice: 15,
     borderColor: "border-[var(--brand-yellow)]",
     icon: Building2,
     priceIds: { monthly: "business_monthly", yearly: "business_yearly" } as const,

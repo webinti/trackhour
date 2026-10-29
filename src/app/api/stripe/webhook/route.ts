@@ -21,6 +21,18 @@ function getPlanFromPriceId(priceId: string): Plan {
   return "free";
 }
 
+// Since Stripe API 2025-03-31, current_period_end lives on subscription items.
+function periodEnd(subscription: any): string | null {
+  const ts = subscription.current_period_end ?? subscription.items?.data?.[0]?.current_period_end;
+  return ts ? new Date(ts * 1000).toISOString() : null;
+}
+
+async function updateTeams(column: "id" | "stripe_subscription_id", value: string, values: Record<string, any>) {
+  const { data, error } = await supabase.from("teams").update(values).eq(column, value).select("id");
+  if (error) throw new Error(`teams update failed: ${error.message}`);
+  if (!data?.length) throw new Error(`no team matched ${column}=${value}`);
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature")!;
@@ -44,13 +56,13 @@ export async function POST(req: NextRequest) {
         const priceId = subscription.items.data[0].price.id;
         const plan = getPlanFromPriceId(priceId);
 
-        await supabase.from("teams").update({
+        await updateTeams("id", teamId, {
           stripe_subscription_id: subscription.id,
           plan,
           plan_status: subscription.status,
-          plan_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          plan_period_end: periodEnd(subscription),
           updated_at: new Date().toISOString(),
-        }).eq("id", teamId);
+        });
         break;
       }
 
@@ -59,12 +71,14 @@ export async function POST(req: NextRequest) {
         const priceId = subscription.items.data[0].price.id;
         const plan = getPlanFromPriceId(priceId);
 
-        await supabase.from("teams").update({
+        const teamId = subscription.metadata?.team_id;
+        await updateTeams(teamId ? "id" : "stripe_subscription_id", teamId || subscription.id, {
+          stripe_subscription_id: subscription.id,
           plan,
           plan_status: subscription.status,
-          plan_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          plan_period_end: periodEnd(subscription),
           updated_at: new Date().toISOString(),
-        }).eq("stripe_subscription_id", subscription.id);
+        });
         break;
       }
 
