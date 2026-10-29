@@ -24,7 +24,7 @@ module.exports = {
   apps: [
     {
       name: "trackhour",
-      script: ".next/standalone/server.js",
+      script: path.join(__dirname, ".next/standalone/server.js"),
       cwd: path.join(__dirname, ".next/standalone"),
       env: {
         PORT: "3003",
