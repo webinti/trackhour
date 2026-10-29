@@ -54,8 +54,8 @@ const PLANS = [
   {
     key: "business" as const,
     name: "Business",
-    monthlyPrice: 15,
-    yearlyPrice: 12,
+    monthlyPrice: 19,
+    yearlyPrice: 15,
     borderColor: "border-[var(--brand-yellow)]",
     icon: Building2,
     priceIds: { monthly: "business_monthly", yearly: "business_yearly" } as const,
