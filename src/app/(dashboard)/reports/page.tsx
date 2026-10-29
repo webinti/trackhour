@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPrimaryTeam } from "@/lib/team";
 import { redirect } from "next/navigation";
 import { ReportsPage } from "@/components/dashboard/reports/reports-page";
 import type { Metadata } from "next";
@@ -13,7 +14,7 @@ export default async function ReportsRoute() {
   const twelveMonthsAgo = new Date();
   twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-  const [{ data: timeEntries }, { data: ownedTeam }] = await Promise.all([
+  const [{ data: timeEntries }, team] = await Promise.all([
     supabase
       .from("time_entries")
       .select("*, projects(id, name, color, clients(name)), tasks(id, name, hourly_rate, description, notes)")
@@ -21,11 +22,11 @@ export default async function ReportsRoute() {
       .not("ended_at", "is", null)
       .gte("started_at", twelveMonthsAgo.toISOString())
       .order("started_at", { ascending: true }),
-    supabase.from("teams").select("plan, currency").eq("owner_id", user.id).limit(1).single(),
+    getPrimaryTeam(supabase, user.id),
   ]);
 
-  const plan = (ownedTeam as any)?.plan || "free";
-  const currency = (ownedTeam as any)?.currency || "EUR";
+  const plan = team?.plan || "free";
+  const currency = (team?.currency as any) || "EUR";
 
   return <ReportsPage timeEntries={timeEntries || []} plan={plan} currency={currency} />;
 }

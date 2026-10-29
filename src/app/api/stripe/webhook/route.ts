@@ -1,41 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
-import type { Plan } from "@/lib/supabase/types";
-
-// Use service role directly (no cookie-based auth needed for webhooks)
-const supabase = createSupabaseClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-function getPlanFromPriceId(priceId: string): Plan {
-  if (
-    priceId === process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID ||
-    priceId === process.env.STRIPE_PREMIUM_YEARLY_PRICE_ID
-  ) return "premium";
-  if (
-    priceId === process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID ||
-    priceId === process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
-  ) return "business";
-  return "free";
-}
-
-// Since Stripe API 2025-03-31, current_period_end lives on subscription items.
-function periodEnd(subscription: any): string | null {
-  const ts = subscription.current_period_end ?? subscription.items?.data?.[0]?.current_period_end;
-  return ts ? new Date(ts * 1000).toISOString() : null;
-}
-
-async function updateTeams(column: "id" | "stripe_subscription_id", value: string, values: Record<string, any>) {
-  const { data, error } = await supabase.from("teams").update(values).eq(column, value).select("id");
-  if (error) throw new Error(`teams update failed: ${error.message}`);
-  if (!data?.length) throw new Error(`no team matched ${column}=${value}`);
-}
+import { syncSubscriptionToTeam } from "@/lib/stripe-sync";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const sig = req.headers.get("stripe-signature")!;
+  const sig = req.headers.get("stripe-signature");
+  if (!sig) return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
 
   let event;
   try {
@@ -51,46 +21,24 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as any;
         const teamId = session.metadata?.team_id;
         if (!teamId || !session.subscription) break;
-
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-        const priceId = subscription.items.data[0].price.id;
-        const plan = getPlanFromPriceId(priceId);
-
-        await updateTeams("id", teamId, {
-          stripe_subscription_id: subscription.id,
-          plan,
-          plan_status: subscription.status,
-          plan_period_end: periodEnd(subscription),
-          updated_at: new Date().toISOString(),
-        });
+        const result = await syncSubscriptionToTeam(subscription, teamId);
+        if (!result.matched) {
+          // The team was deleted between checkout and payment: nothing to activate.
+          console.warn(`Webhook ${event.type}: team ${teamId} not found`);
+        }
         break;
       }
 
-      case "customer.subscription.updated": {
-        const subscription = event.data.object as any;
-        const priceId = subscription.items.data[0].price.id;
-        const plan = getPlanFromPriceId(priceId);
-
-        const teamId = subscription.metadata?.team_id;
-        await updateTeams(teamId ? "id" : "stripe_subscription_id", teamId || subscription.id, {
-          stripe_subscription_id: subscription.id,
-          plan,
-          plan_status: subscription.status,
-          plan_period_end: periodEnd(subscription),
-          updated_at: new Date().toISOString(),
-        });
-        break;
-      }
-
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as any;
-        await supabase.from("teams").update({
-          plan: "free",
-          plan_status: "canceled",
-          stripe_subscription_id: null,
-          plan_period_end: null,
-          updated_at: new Date().toISOString(),
-        }).eq("stripe_subscription_id", subscription.id);
+        const result = await syncSubscriptionToTeam(subscription);
+        if (!result.matched) {
+          // Subscriptions created outside this app (other integrations on the same Stripe account).
+          console.warn(`Webhook ${event.type}: no team for subscription ${subscription.id}, ignored`);
+        }
         break;
       }
     }

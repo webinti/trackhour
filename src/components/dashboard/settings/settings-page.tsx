@@ -68,7 +68,10 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<Tab>("profil");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const requested = searchParams.get("tab");
+    return TABS.some((t) => t.key === requested) ? (requested as Tab) : "profil";
+  });
 
   // Profil
   const [fullName, setFullName] = useState(profile?.full_name || "");
@@ -103,11 +106,29 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
   const currentPlan = team?.plan || "free";
 
   useEffect(() => {
-    if (searchParams.get("success") === "1") {
-      toast.success("Abonnement activé ! Merci 🎉");
-      setActiveTab("abonnement");
-      router.replace("/settings");
-    }
+    if (searchParams.get("success") !== "1") return;
+    const sessionId = searchParams.get("session_id");
+    setActiveTab("abonnement");
+    router.replace("/settings?tab=abonnement");
+
+    (async () => {
+      if (!sessionId) {
+        toast.success("Abonnement activé ! Merci 🎉");
+        return;
+      }
+      const res = await fetch("/api/stripe/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.plan && data.plan !== "free") {
+        toast.success(`Plan ${data.plan.charAt(0).toUpperCase() + data.plan.slice(1)} activé ! Merci 🎉`);
+      } else {
+        toast.info("Paiement reçu, activation en cours. Rechargez la page dans quelques instants.");
+      }
+      router.refresh();
+    })();
   }, [searchParams, router]);
 
   const inputClass =
@@ -237,8 +258,12 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
 
   // --- Handlers Abonnement ---
   const handleUpgrade = async (priceKey: string) => {
-    setCheckoutLoading(priceKey);
     const [planKey, period] = priceKey.split("_") as [string, string];
+    if (
+      currentPlan !== "free" &&
+      !window.confirm("Votre abonnement actuel sera modifié immédiatement et la différence facturée au prorata. Continuer ?")
+    ) return;
+    setCheckoutLoading(priceKey);
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -247,8 +272,16 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
       });
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
-      if (data.url) window.location.href = data.url;
-      else toast.error(data.error || `Erreur serveur (${res.status})`);
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      if (data.updated) {
+        toast.success(`Plan ${data.plan.charAt(0).toUpperCase() + data.plan.slice(1)} activé`);
+        router.refresh();
+      } else {
+        toast.error(data.error || `Erreur serveur (${res.status})`);
+      }
     } catch (e) { toast.error("Erreur : " + String(e)); }
     setCheckoutLoading(null);
   };
@@ -467,6 +500,14 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                 </p>
               )}
 
+              {currentPlan !== "free" && (team?.plan_status === "past_due" || team?.plan_status === "unpaid") && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3">
+                  <p className="text-xs font-medium text-amber-700">
+                    Votre dernier paiement a échoué. Mettez à jour votre moyen de paiement via « Gérer mon abonnement » pour conserver votre plan.
+                  </p>
+                </div>
+              )}
+
               {/* Billing toggle */}
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl p-1 w-fit mb-5 mt-4">
                 <button onClick={() => setBillingPeriod("monthly")}
@@ -477,7 +518,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                 <button onClick={() => setBillingPeriod("yearly")}
                   className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                     billingPeriod === "yearly" ? "bg-white text-[var(--brand-dark)] shadow-sm" : "text-gray-500")}>
-                  Annuel <span className="text-[var(--brand-green)] font-semibold">-10%</span>
+                  Annuel <span className="text-[var(--brand-green)] font-semibold">jusqu&apos;à -21 %</span>
                 </button>
               </div>
 
@@ -504,8 +545,13 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                           <span className="text-sm font-semibold text-[var(--brand-dark)]">{plan.name}</span>
                           {isCurrent && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Actuel</span>}
                         </div>
-                        <span className="text-sm font-bold text-[var(--brand-dark)]">
+                        <span className="text-sm font-bold text-[var(--brand-dark)] text-right">
                           {plan.monthlyPrice === 0 ? "Gratuit" : `${price}€/mois`}
+                          {plan.monthlyPrice > 0 && billingPeriod === "yearly" && (
+                            <span className="block text-[11px] font-normal text-gray-400">
+                              {plan.yearlyPrice * 12} €/an · -{Math.round((1 - plan.yearlyPrice / plan.monthlyPrice) * 100)} %
+                            </span>
+                          )}
                         </span>
                       </div>
                       <ul className="mt-2 space-y-1">
@@ -540,7 +586,7 @@ export function SettingsPage({ profile, email, team }: SettingsPageProps) {
                             />
                           )}
                           <span className="relative">
-                            {checkoutLoading === priceKey ? "Chargement..." : `Passer au plan ${plan.name}`}
+                            {checkoutLoading === priceKey ? "Chargement..." : currentPlan === "free" ? `Passer au plan ${plan.name}` : `Changer pour ${plan.name}`}
                           </span>
                         </button>
                       )}

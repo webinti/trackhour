@@ -49,7 +49,7 @@ const PLANS = [
     description: "Idéal pour les agences",
     monthlyPrice: 19,
     yearlyPrice: 180,
-    badge: "-20 %",
+    badge: "-21 %",
     badgeColor: "bg-[var(--brand-green)]",
     features: [
       "Time tracker",
