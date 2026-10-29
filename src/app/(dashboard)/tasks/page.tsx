@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getPrimaryTeam } from "@/lib/team";
 import { TasksPage } from "@/components/dashboard/tasks/tasks-page";
 
 export const metadata = {
@@ -17,15 +18,7 @@ export default async function TasksRoute() {
     redirect("/login");
   }
 
-  // Get current team
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("owner_id", user.id)
-    .limit(1)
-    .single();
+  const team = await getPrimaryTeam(supabase, user.id);
 
-  const teamId = teams?.id;
-
-  return <TasksPage teamId={teamId} />;
+  return <TasksPage teamId={team?.id} />;
 }

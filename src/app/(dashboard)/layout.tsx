@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { TopBar } from "@/components/dashboard/topbar";
 import { BottomNav } from "@/components/dashboard/bottom-nav";
+import { getPrimaryTeam } from "@/lib/team";
 
 export default async function DashboardLayout({
   children,
@@ -21,9 +22,10 @@ export default async function DashboardLayout({
     .single();
 
   // Fetch team IDs for this user
-  const [{ data: ownedTeams }, { data: memberTeams }] = await Promise.all([
+  const [{ data: ownedTeams }, { data: memberTeams }, primaryTeam] = await Promise.all([
     supabase.from("teams").select("id, plan").eq("owner_id", user.id),
     supabase.from("team_members").select("team_id").eq("user_id", user.id).eq("status", "active"),
+    getPrimaryTeam(supabase, user.id),
   ]);
 
   const allTeamIds = [
@@ -64,7 +66,7 @@ export default async function DashboardLayout({
     members: membersCount || 0,
   };
 
-  const plan = (ownedTeams?.[0] as any)?.plan || "free";
+  const plan = primaryTeam?.plan || "free";
 
   return (
     <div className="flex h-screen bg-[#F2F2F2] overflow-hidden" suppressHydrationWarning>

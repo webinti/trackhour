@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getPrimaryTeam } from "@/lib/team";
 import { ProjectsPage } from "@/components/dashboard/projects/projects-page";
 
 export const metadata = {
@@ -22,20 +23,12 @@ export default async function ProjectsRoute({
     redirect("/login");
   }
 
-  // Get current team
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("owner_id", user.id)
-    .limit(1)
-    .single();
-
-  const teamId = teams?.id;
+  const team = await getPrimaryTeam(supabase, user.id);
 
   return (
     <ProjectsPage
-      teamId={teamId}
-      plan={(teams?.plan as any) || "free"}
+      teamId={team?.id}
+      plan={team?.plan || "free"}
       openForm={openNew === "1"}
     />
   );
