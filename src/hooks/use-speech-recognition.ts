@@ -1,12 +1,21 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { toast } from "sonner";
 
 interface UseSpeechRecognitionOptions {
   lang?: string;
   continuous?: boolean;
   onResult?: (transcript: string) => void;
 }
+
+const ERROR_MESSAGES: Record<string, string> = {
+  "not-allowed": "Microphone non autorisé. Vérifie les permissions du site.",
+  "no-speech": "Aucune voix détectée. Réessaie.",
+  "audio-capture": "Aucun microphone détecté.",
+  "network": "Erreur réseau — la reconnaissance vocale nécessite une connexion internet.",
+  "service-not-available": "Service de reconnaissance vocale indisponible.",
+};
 
 export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) {
   const { lang = "fr-FR", continuous = true, onResult } = options;
@@ -29,6 +38,11 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     recognition.interimResults = true;
 
     let accumulated = "";
+    let hasStarted = false;
+
+    recognition.onaudiostart = () => {
+      hasStarted = true;
+    };
 
     recognition.onresult = (event: any) => {
       let interim = "";
@@ -46,27 +60,42 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     };
 
     recognition.onerror = (event: any) => {
-      if (event.error !== "aborted") {
-        console.error("Speech recognition error:", event.error);
+      const msg = ERROR_MESSAGES[event.error];
+      if (msg) {
+        toast.error(msg);
+      } else if (event.error !== "aborted") {
+        toast.error(`Erreur micro : ${event.error}`);
       }
       setIsRecording(false);
       setInterimTranscript("");
     };
 
     recognition.onend = () => {
+      if (isRecording && hasStarted && recognitionRef.current) {
+        try {
+          recognition.start();
+          return;
+        } catch {}
+      }
       setIsRecording(false);
       setInterimTranscript("");
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-    setIsRecording(true);
-    setInterimTranscript("");
+    try {
+      recognition.start();
+      setIsRecording(true);
+      setInterimTranscript("");
+    } catch (e: any) {
+      toast.error("Impossible de démarrer le micro.");
+      setIsRecording(false);
+    }
   }, [isSupported, isRecording, lang, continuous]);
 
   const stop = useCallback(() => {
-    recognitionRef.current?.stop();
+    const recognition = recognitionRef.current;
     recognitionRef.current = null;
+    recognition?.stop();
     setIsRecording(false);
     setInterimTranscript("");
   }, []);
@@ -79,6 +108,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
+      recognitionRef.current = null;
     };
   }, []);
 
