@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Trash2, Pencil, Check, X, ChevronDown, Clock } from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { MicButton } from "@/components/ui/mic-button";
 import { formatDuration, formatCurrency, calculateEarnings, getCurrencySymbol } from "@/lib/utils";
 import type { Currency } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -54,6 +56,46 @@ function ReportToggle({ checked, onChange, label }: { checked: boolean; onChange
       </span>
       {label}
     </button>
+  );
+}
+
+function EditEntryMicRow({
+  value,
+  onChange,
+  placeholder,
+  rows,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  rows: number;
+  label: string;
+}) {
+  const mic = useSpeechRecognition({
+    onResult: (text) => {
+      onChange((value ? value + " " : "") + text);
+    },
+  });
+
+  return (
+    <div className="relative">
+      <textarea
+        value={value + (mic.isRecording && mic.interimTranscript ? " " + mic.interimTranscript : "")}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 pr-9 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
+      />
+      <MicButton
+        isRecording={mic.isRecording}
+        isSupported={mic.isSupported}
+        onClick={mic.toggle}
+        label={label}
+        size="sm"
+        className="absolute top-1.5 right-1.5"
+      />
+    </div>
   );
 }
 
@@ -296,35 +338,35 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
                                     if (e.key === "Enter") handleSaveEdit(entry.id);
                                     if (e.key === "Escape") handleCancelEdit();
                                   }}
-                                  placeholder="Description..."
+                                  placeholder="Description sommaire..."
                                   className="w-full text-sm font-medium text-[var(--brand-dark)] bg-gray-50 border border-[var(--brand-blue)] rounded-lg px-3 py-1.5 focus:outline-none"
                                 />
                                 <div className="space-y-1">
-                                  <textarea
+                                  <EditEntryMicRow
                                     value={editWorkDescription}
-                                    onChange={(e) => setEditWorkDescription(e.target.value)}
-                                    placeholder="Description des travaux en cours..."
+                                    onChange={setEditWorkDescription}
+                                    placeholder="Description détaillée de l'intervention..."
                                     rows={2}
-                                    className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
+                                    label="Description détaillée"
                                   />
                                   <ReportToggle
                                     checked={editShowWorkDescription}
                                     onChange={setEditShowWorkDescription}
-                                    label="Afficher la description dans le rapport PDF"
+                                    label="Inclure dans le rapport PDF"
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <textarea
+                                  <EditEntryMicRow
                                     value={editWorkNotes}
-                                    onChange={(e) => setEditWorkNotes(e.target.value)}
+                                    onChange={setEditWorkNotes}
                                     placeholder="Notes internes..."
                                     rows={2}
-                                    className="w-full text-xs text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--brand-blue)] resize-none"
+                                    label="Notes internes"
                                   />
                                   <ReportToggle
                                     checked={editShowWorkNotes}
                                     onChange={setEditShowWorkNotes}
-                                    label="Afficher les notes dans le rapport PDF"
+                                    label="Inclure dans le rapport PDF"
                                   />
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">

@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, Square, Pause, Folder, Tag, ChevronDown, Plus, X } from "lucide-react";
+import { Play, Square, Pause, Folder, Tag, ChevronDown, Plus, X, Mic } from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { MicButton } from "@/components/ui/mic-button";
 import { createClient } from "@/lib/supabase/client";
 import { formatDuration, formatCurrency, calculateEarnings, PROJECT_COLORS, getCurrencySymbol } from "@/lib/utils";
 import type { Currency } from "@/lib/utils";
@@ -10,6 +12,28 @@ import { cn } from "@/lib/utils";
 import { Toggle } from "@/components/ui/toggle";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+
+function ReportToggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex items-center gap-2 text-xs text-gray-500 select-none"
+    >
+      <span
+        className={cn(
+          "flex items-center w-7 h-4 rounded-full px-0.5 transition-colors duration-200",
+          checked ? "bg-[var(--brand-blue)] justify-end" : "bg-gray-200 justify-start"
+        )}
+      >
+        <span className="w-3 h-3 bg-white rounded-full shadow-sm" />
+      </span>
+      {label}
+    </button>
+  );
+}
 
 export function HeaderTimer() {
   const supabase = createClient();
@@ -41,8 +65,17 @@ export function HeaderTimer() {
   const [primaryTeamId, setPrimaryTeamId] = useState<string | null>(null);
   const [currency, setCurrency] = useState<Currency>("EUR");
 
+  // Voice notes panel
+  const [showVoicePanel, setShowVoicePanel] = useState(false);
+  const [workDescription, setWorkDescription] = useState("");
+  const [workNotes, setWorkNotes] = useState("");
+  const [showWorkDescription, setShowWorkDescription] = useState(false);
+  const [showWorkNotes, setShowWorkNotes] = useState(false);
+  const voiceSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const projectPickerRef = useRef<HTMLDivElement>(null);
   const taskPickerRef = useRef<HTMLDivElement>(null);
+  const voicePanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onCurrencyChange = (e: Event) => setCurrency((e as CustomEvent<Currency>).detail);
@@ -87,6 +120,10 @@ export function HeaderTimer() {
         setSelectedTask(timer.tasks || null);
         const rate = timer.hourly_rate ?? timer.tasks?.hourly_rate;
         if (rate) setManualRate(rate.toString());
+        setWorkDescription(timer.work_description || "");
+        setWorkNotes(timer.work_notes || "");
+        setShowWorkDescription(timer.show_work_description === true);
+        setShowWorkNotes(timer.show_work_notes === true);
 
         const accumulatedPause = timer.paused_duration || 0;
         setPausedDuration(accumulatedPause);
@@ -258,6 +295,14 @@ export function HeaderTimer() {
     setSelectedProject(null);
     setSelectedTask(null);
     setManualRate("");
+    setWorkDescription("");
+    setWorkNotes("");
+    setShowWorkDescription(false);
+    setShowWorkNotes(false);
+    setShowVoicePanel(false);
+    micDescription.stop();
+    micWorkDescription.stop();
+    micWorkNotes.stop();
     setLoading(false);
     router.refresh();
   }, [activeTimer, supabase, router, isPaused, pausedAtMs, pausedDuration]);
@@ -299,6 +344,40 @@ export function HeaderTimer() {
     }
     setNewProjectLoading(false);
   }, [primaryTeamId, userId, newProjectForm, supabase]);
+
+  // Save voice notes to the active time entry (debounced)
+  const saveVoiceFields = useCallback(async (fields: Record<string, any>) => {
+    if (!activeTimer) return;
+    if (voiceSaveTimeoutRef.current) clearTimeout(voiceSaveTimeoutRef.current);
+    voiceSaveTimeoutRef.current = setTimeout(async () => {
+      await supabase.from("time_entries").update(fields).eq("id", activeTimer.id);
+    }, 500);
+  }, [activeTimer, supabase]);
+
+  // Speech recognition for each zone
+  const micDescription = useSpeechRecognition({
+    onResult: (text) => {
+      const updated = (description ? description + " " : "") + text;
+      setDescription(updated);
+      saveVoiceFields({ description: updated });
+    },
+  });
+
+  const micWorkDescription = useSpeechRecognition({
+    onResult: (text) => {
+      const updated = (workDescription ? workDescription + " " : "") + text;
+      setWorkDescription(updated);
+      saveVoiceFields({ work_description: updated });
+    },
+  });
+
+  const micWorkNotes = useSpeechRecognition({
+    onResult: (text) => {
+      const updated = (workNotes ? workNotes + " " : "") + text;
+      setWorkNotes(updated);
+      saveVoiceFields({ work_notes: updated });
+    },
+  });
 
   const tasks = selectedProject?.tasks || [];
   const rate = parseFloat(manualRate);
@@ -572,6 +651,198 @@ export function HeaderTimer() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Voice notes button — visible only when running */}
+      <AnimatePresence>
+        {running && micDescription.isSupported && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="relative"
+            ref={voicePanelRef}
+          >
+            <button
+              onClick={() => setShowVoicePanel(!showVoicePanel)}
+              title="Notes vocales"
+              className={cn(
+                "w-9 h-9 flex items-center justify-center rounded-lg transition-colors shrink-0 relative",
+                showVoicePanel || micDescription.isRecording || micWorkDescription.isRecording || micWorkNotes.isRecording
+                  ? "bg-red-100 text-red-500"
+                  : "bg-purple-100 hover:bg-purple-200 text-purple-600"
+              )}
+            >
+              <Mic size={14} />
+              {(micDescription.isRecording || micWorkDescription.isRecording || micWorkNotes.isRecording) && (
+                <motion.span
+                  className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500"
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                />
+              )}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Voice panel slide-over */}
+      <AnimatePresence>
+        {showVoicePanel && running && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowVoicePanel(false)}
+              className="fixed inset-0 bg-black/20 z-40"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl z-50 flex flex-col"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <h2 className="text-sm font-bold text-[var(--brand-dark)]">Notes vocales</h2>
+                <button
+                  onClick={() => setShowVoicePanel(false)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Zone 1: Description sommaire */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-[var(--brand-dark)] uppercase tracking-wide">
+                      Description sommaire
+                    </label>
+                    <MicButton
+                      isRecording={micDescription.isRecording}
+                      isSupported={micDescription.isSupported}
+                      onClick={micDescription.toggle}
+                      label="Description sommaire"
+                    />
+                  </div>
+                  <textarea
+                    value={description + (micDescription.isRecording && micDescription.interimTranscript ? " " + micDescription.interimTranscript : "")}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      saveVoiceFields({ description: e.target.value || null });
+                    }}
+                    placeholder="Décrivez brièvement l'intervention..."
+                    rows={2}
+                    className="w-full text-sm text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] resize-none"
+                  />
+                  {micDescription.isRecording && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-xs text-red-500 flex items-center gap-1"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      Enregistrement en cours...
+                    </motion.p>
+                  )}
+                </div>
+
+                {/* Zone 2: Description détaillée */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-[var(--brand-dark)] uppercase tracking-wide">
+                      Description détaillée
+                    </label>
+                    <MicButton
+                      isRecording={micWorkDescription.isRecording}
+                      isSupported={micWorkDescription.isSupported}
+                      onClick={micWorkDescription.toggle}
+                      label="Description détaillée"
+                    />
+                  </div>
+                  <textarea
+                    value={workDescription + (micWorkDescription.isRecording && micWorkDescription.interimTranscript ? " " + micWorkDescription.interimTranscript : "")}
+                    onChange={(e) => {
+                      setWorkDescription(e.target.value);
+                      saveVoiceFields({ work_description: e.target.value || null });
+                    }}
+                    placeholder="Détails de l'intervention..."
+                    rows={3}
+                    className="w-full text-sm text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] resize-none"
+                  />
+                  <div className="flex items-center justify-between">
+                    <ReportToggle
+                      checked={showWorkDescription}
+                      onChange={(v) => {
+                        setShowWorkDescription(v);
+                        saveVoiceFields({ show_work_description: v });
+                      }}
+                      label="Inclure dans le rapport"
+                    />
+                    {micWorkDescription.isRecording && (
+                      <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-xs text-red-500 flex items-center gap-1"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                        Enregistrement...
+                      </motion.span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Zone 3: Notes internes */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-[var(--brand-dark)] uppercase tracking-wide">
+                      Notes internes
+                    </label>
+                    <MicButton
+                      isRecording={micWorkNotes.isRecording}
+                      isSupported={micWorkNotes.isSupported}
+                      onClick={micWorkNotes.toggle}
+                      label="Notes internes"
+                    />
+                  </div>
+                  <textarea
+                    value={workNotes + (micWorkNotes.isRecording && micWorkNotes.interimTranscript ? " " + micWorkNotes.interimTranscript : "")}
+                    onChange={(e) => {
+                      setWorkNotes(e.target.value);
+                      saveVoiceFields({ work_notes: e.target.value || null });
+                    }}
+                    placeholder="Notes internes (non visibles par le client)..."
+                    rows={3}
+                    className="w-full text-sm text-[var(--brand-dark)] bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] resize-none"
+                  />
+                  <div className="flex items-center justify-between">
+                    <ReportToggle
+                      checked={showWorkNotes}
+                      onChange={(v) => {
+                        setShowWorkNotes(v);
+                        saveVoiceFields({ show_work_notes: v });
+                      }}
+                      label="Inclure dans le rapport"
+                    />
+                    {micWorkNotes.isRecording && (
+                      <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-xs text-red-500 flex items-center gap-1"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                        Enregistrement...
+                      </motion.span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </>
         )}
