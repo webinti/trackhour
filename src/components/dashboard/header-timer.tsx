@@ -392,16 +392,31 @@ export function HeaderTimer() {
   return (
     <div className="flex items-center gap-1.5 md:gap-2 flex-1 mx-0 md:mx-4">
       {/* Description input */}
-      <input
-        type="text"
-        placeholder="Tâche en cours..."
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        disabled={running}
-        onKeyDown={(e) => e.key === "Enter" && !running && handleStart()}
-        className="flex-1 text-sm text-[var(--brand-dark)] placeholder:text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-all disabled:bg-transparent disabled:border-transparent disabled:cursor-default"
-        suppressHydrationWarning
-      />
+      <div className="relative flex-1 min-w-0">
+        <input
+          type="text"
+          placeholder="Tâche en cours..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={running}
+          onKeyDown={(e) => e.key === "Enter" && !running && handleStart()}
+          className={cn(
+            "w-full text-sm text-[var(--brand-dark)] placeholder:text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-1 focus:ring-[var(--brand-blue)] transition-all disabled:bg-transparent disabled:border-transparent disabled:cursor-default",
+            !running && micDescription.isSupported && "pr-10"
+          )}
+          suppressHydrationWarning
+        />
+        {!running && (
+          <MicButton
+            isRecording={micDescription.isRecording}
+            isSupported={micDescription.isSupported}
+            isTranscribing={micDescription.isTranscribing}
+            onClick={micDescription.toggle}
+            label="Nom de la tâche"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2"
+          />
+        )}
+      </div>
 
       {/* Project picker */}
       <div className="relative" ref={projectPickerRef}>

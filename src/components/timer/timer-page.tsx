@@ -100,6 +100,46 @@ function EditEntryMicRow({
   );
 }
 
+function EditTitleMicInput({
+  value,
+  onChange,
+  onKeyDown,
+  inputRef,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  inputRef: React.Ref<HTMLInputElement>;
+}) {
+  const mic = useVoiceDictation({
+    onResult: (text) => {
+      onChange((value ? value + " " : "") + text);
+    },
+  });
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder="Nom de la tâche..."
+        className="w-full text-sm font-medium text-[var(--brand-dark)] bg-gray-50 border border-[var(--brand-blue)] rounded-lg px-3 py-1.5 pr-9 focus:outline-none"
+      />
+      <MicButton
+        isRecording={mic.isRecording}
+        isSupported={mic.isSupported}
+        isTranscribing={mic.isTranscribing}
+        onClick={mic.toggle}
+        label="Nom de la tâche"
+        className="absolute right-1 top-1/2 -translate-y-1/2"
+      />
+    </div>
+  );
+}
+
 export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPageProps) {
   const supabase = createClient();
   const [entries, setEntries] = useState(timeEntries);
@@ -330,17 +370,14 @@ export function TimerPage({ timeEntries, userId, currency = "EUR" }: TimerPagePr
                             {isEditing ? (
                               /* Edit mode */
                               <div className="space-y-2">
-                                <input
-                                  ref={editInputRef}
-                                  type="text"
+                                <EditTitleMicInput
+                                  inputRef={editInputRef}
                                   value={editDescription}
-                                  onChange={(e) => setEditDescription(e.target.value)}
+                                  onChange={setEditDescription}
                                   onKeyDown={(e) => {
                                     if (e.key === "Enter") handleSaveEdit(entry.id);
                                     if (e.key === "Escape") handleCancelEdit();
                                   }}
-                                  placeholder="Description sommaire..."
-                                  className="w-full text-sm font-medium text-[var(--brand-dark)] bg-gray-50 border border-[var(--brand-blue)] rounded-lg px-3 py-1.5 focus:outline-none"
                                 />
                                 <div className="space-y-1">
                                   <EditEntryMicRow
