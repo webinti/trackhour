@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// OpenAI rejects audio files above 25 MB.
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+
+const DEEPGRAM_URL =
+  "https://api.deepgram.com/v1/listen?model=nova-3&language=fr&smart_format=true&punctuate=true";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -14,7 +16,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.DEEPGRAM_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "Transcription non configurée" }, { status: 503 });
   }
@@ -28,24 +30,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Enregistrement trop long" }, { status: 413 });
   }
 
-  const filename = audio instanceof File && audio.name ? audio.name : "audio.webm";
-  const upstream = new FormData();
-  upstream.append("file", audio, filename);
-  upstream.append("model", "whisper-1");
-  upstream.append("language", "fr");
-  upstream.append("response_format", "json");
-
-  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+  const res = await fetch(DEEPGRAM_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: upstream,
+    headers: {
+      Authorization: `Token ${apiKey}`,
+      "Content-Type": audio.type || "audio/webm",
+    },
+    body: await audio.arrayBuffer(),
   });
 
   if (!res.ok) {
-    console.error("Whisper error:", res.status, await res.text());
+    console.error("Deepgram error:", res.status, await res.text());
     return NextResponse.json({ error: "Échec de la transcription" }, { status: 502 });
   }
 
-  const { text } = (await res.json()) as { text?: string };
-  return NextResponse.json({ text: (text ?? "").trim() });
+  const data = await res.json();
+  const text: string = data?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "";
+  return NextResponse.json({ text: text.trim() });
 }
