@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Play, Square, Pause, Folder, Tag, ChevronDown, Plus, X, Mic } from "lucide-react";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useVoiceDictation } from "@/hooks/use-voice-dictation";
 import { MicButton } from "@/components/ui/mic-button";
 import { createClient } from "@/lib/supabase/client";
 import { formatDuration, formatCurrency, calculateEarnings, PROJECT_COLORS, getCurrencySymbol } from "@/lib/utils";
@@ -72,6 +72,7 @@ export function HeaderTimer() {
   const [showWorkDescription, setShowWorkDescription] = useState(false);
   const [showWorkNotes, setShowWorkNotes] = useState(false);
   const voiceSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingVoiceFieldsRef = useRef<Record<string, any>>({});
 
   const projectPickerRef = useRef<HTMLDivElement>(null);
   const taskPickerRef = useRef<HTMLDivElement>(null);
@@ -345,17 +346,20 @@ export function HeaderTimer() {
     setNewProjectLoading(false);
   }, [primaryTeamId, userId, newProjectForm, supabase]);
 
-  // Save voice notes to the active time entry (debounced)
-  const saveVoiceFields = useCallback(async (fields: Record<string, any>) => {
+  // Debounced save; pending fields are merged so quick successive edits to different fields all persist.
+  const saveVoiceFields = useCallback((fields: Record<string, any>) => {
     if (!activeTimer) return;
+    const entryId = activeTimer.id;
+    pendingVoiceFieldsRef.current = { ...pendingVoiceFieldsRef.current, ...fields };
     if (voiceSaveTimeoutRef.current) clearTimeout(voiceSaveTimeoutRef.current);
     voiceSaveTimeoutRef.current = setTimeout(async () => {
-      await supabase.from("time_entries").update(fields).eq("id", activeTimer.id);
+      const pending = pendingVoiceFieldsRef.current;
+      pendingVoiceFieldsRef.current = {};
+      await supabase.from("time_entries").update(pending).eq("id", entryId);
     }, 500);
   }, [activeTimer, supabase]);
 
-  // Speech recognition for each zone
-  const micDescription = useSpeechRecognition({
+  const micDescription = useVoiceDictation({
     onResult: (text) => {
       const updated = (description ? description + " " : "") + text;
       setDescription(updated);
@@ -363,7 +367,7 @@ export function HeaderTimer() {
     },
   });
 
-  const micWorkDescription = useSpeechRecognition({
+  const micWorkDescription = useVoiceDictation({
     onResult: (text) => {
       const updated = (workDescription ? workDescription + " " : "") + text;
       setWorkDescription(updated);
@@ -371,7 +375,7 @@ export function HeaderTimer() {
     },
   });
 
-  const micWorkNotes = useSpeechRecognition({
+  const micWorkNotes = useVoiceDictation({
     onResult: (text) => {
       const updated = (workNotes ? workNotes + " " : "") + text;
       setWorkNotes(updated);
@@ -727,12 +731,13 @@ export function HeaderTimer() {
                     <MicButton
                       isRecording={micDescription.isRecording}
                       isSupported={micDescription.isSupported}
+                      isTranscribing={micDescription.isTranscribing}
                       onClick={micDescription.toggle}
                       label="Description sommaire"
                     />
                   </div>
                   <textarea
-                    value={description + (micDescription.isRecording && micDescription.interimTranscript ? " " + micDescription.interimTranscript : "")}
+                    value={description}
                     onChange={(e) => {
                       setDescription(e.target.value);
                       saveVoiceFields({ description: e.target.value || null });
@@ -762,12 +767,13 @@ export function HeaderTimer() {
                     <MicButton
                       isRecording={micWorkDescription.isRecording}
                       isSupported={micWorkDescription.isSupported}
+                      isTranscribing={micWorkDescription.isTranscribing}
                       onClick={micWorkDescription.toggle}
                       label="Description détaillée"
                     />
                   </div>
                   <textarea
-                    value={workDescription + (micWorkDescription.isRecording && micWorkDescription.interimTranscript ? " " + micWorkDescription.interimTranscript : "")}
+                    value={workDescription}
                     onChange={(e) => {
                       setWorkDescription(e.target.value);
                       saveVoiceFields({ work_description: e.target.value || null });
@@ -807,12 +813,13 @@ export function HeaderTimer() {
                     <MicButton
                       isRecording={micWorkNotes.isRecording}
                       isSupported={micWorkNotes.isSupported}
+                      isTranscribing={micWorkNotes.isTranscribing}
                       onClick={micWorkNotes.toggle}
                       label="Notes internes"
                     />
                   </div>
                   <textarea
-                    value={workNotes + (micWorkNotes.isRecording && micWorkNotes.interimTranscript ? " " + micWorkNotes.interimTranscript : "")}
+                    value={workNotes}
                     onChange={(e) => {
                       setWorkNotes(e.target.value);
                       saveVoiceFields({ work_notes: e.target.value || null });

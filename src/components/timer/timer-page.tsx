@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Trash2, Pencil, Check, X, ChevronDown, Clock } from "lucide-react";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useVoiceDictation } from "@/hooks/use-voice-dictation";
 import { MicButton } from "@/components/ui/mic-button";
 import { formatDuration, formatCurrency, calculateEarnings, getCurrencySymbol } from "@/lib/utils";
 import type { Currency } from "@/lib/utils";
@@ -72,7 +72,7 @@ function EditEntryMicRow({
   rows: number;
   label: string;
 }) {
-  const mic = useSpeechRecognition({
+  const mic = useVoiceDictation({
     onResult: (text) => {
       onChange((value ? value + " " : "") + text);
     },
@@ -81,7 +81,7 @@ function EditEntryMicRow({
   return (
     <div className="relative">
       <textarea
-        value={value + (mic.isRecording && mic.interimTranscript ? " " + mic.interimTranscript : "")}
+        value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
@@ -90,6 +90,7 @@ function EditEntryMicRow({
       <MicButton
         isRecording={mic.isRecording}
         isSupported={mic.isSupported}
+        isTranscribing={mic.isTranscribing}
         onClick={mic.toggle}
         label={label}
         size="sm"
